@@ -5,7 +5,7 @@ import os
 import sys
 import time
 import glob
-import cookielib
+import http.cookiejar
 import tempfile
 try:
     import json
@@ -71,7 +71,8 @@ class Chrome:
 
     def __del__(self):
         # remove temporary backup of sqlite cookie database
-        os.remove(self.tmp_cookie_file)
+        if (hasattr(self, 'tmp_cookie_file')): #if there was an error till here
+            os.remove(self.tmp_cookie_file)
 
     def __str__(self):
         return 'chrome'
@@ -83,7 +84,7 @@ class Chrome:
         con = sqlite3.connect(self.tmp_cookie_file)
         cur = con.cursor()
         cur.execute('SELECT host_key, path, secure, expires_utc, name, value, encrypted_value FROM cookies;')
-        cj = cookielib.CookieJar()
+        cj = http.cookiejar.CookieJar()
         for item in cur.fetchall():
             host, path, secure, expires, name = item[:5]
             value = self._decrypt(item[5], item[6])
@@ -152,7 +153,7 @@ class Firefox:
         cur = con.cursor()
         cur.execute('select host, path, isSecure, expiry, name, value from moz_cookies')
 
-        cj = cookielib.CookieJar()
+        cj = http.cookiejar.CookieJar()
         for item in cur.fetchall():
             c = create_cookie(*item)
             cj.set_cookie(c)
@@ -162,15 +163,13 @@ class Firefox:
             try:
                 json_data = json.loads(open(self.session_file, 'rb').read())
             except ValueError as e:
-                print 'Error parsing firefox session JSON:', str(e)
+                print('Error parsing firefox session JSON:', str(e))
             else:
                 expires = str(int(time.time()) + 3600 * 24 * 7)
                 for window in json_data.get('windows', []):
                     for cookie in window.get('cookies', []):
                         c = create_cookie(cookie.get('host', ''), cookie.get('path', ''), False, expires, cookie.get('name', ''), cookie.get('value', ''))
                         cj.set_cookie(c)
-        else:
-            print 'Firefox session filename does not exist:', self.session_file
 
         return cj
 
@@ -178,7 +177,7 @@ class Firefox:
 def create_cookie(host, path, secure, expires, name, value):
     """Shortcut function to create a cookie
     """
-    return cookielib.Cookie(0, name, value, None, False, host, host.startswith('.'), host.startswith('.'), path, True, secure, expires, False, None, None, {})
+    return http.cookiejar.Cookie(0, name, value, None, False, host, host.startswith('.'), host.startswith('.'), path, True, secure, expires, False, None, None, {})
 
 
 def chrome(cookie_file=None):
@@ -196,7 +195,7 @@ def firefox(cookie_file=None):
 def load():
     """Try to load cookies from all supported browsers and return combined cookiejar
     """
-    cj = cookielib.CookieJar()
+    cj = http.cookiejar.CookieJar()
     for cookie_fn in [chrome, firefox]:
         try:
             for cookie in cookie_fn():
