@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='browser-cookie3', 
-    version='0.4',
+    version='0.5.0',
     packages=['browser_cookie3'],
     package_dir={'browser_cookie3' : '.'}, # look for package contents in current directory
     author='Boris Babic',

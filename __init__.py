@@ -60,7 +60,8 @@ class Chrome:
             my_pass = 'peanuts'.encode('utf8')
             iterations = 1
             cookie_file = cookie_file or os.path.expanduser('~/.config/google-chrome/Default/Cookies') or \
-                                         os.path.expanduser('~/.config/chromium/Default/Cookies')
+                                         os.path.expanduser('~/.config/chromium/Default/Cookies') or \
+                                         os.path.expanduser('~/.config/google-chrome-beta/Default/Cookies')
 
         else:
             # XXX need to add Chrome on Windows support 
@@ -108,7 +109,9 @@ class Chrome:
         # eg if last is '\x0e' then ord('\x0e') == 14, so take off 14.
         # You'll need to change this function to use ord() for python2.
         def clean(x):
-            return x[:-ord(x[-1])].decode('utf8')
+            trailing = x[-1]
+            decoded = x.decode()
+            return decoded[:-trailing]
 
         iv = b' ' * 16
         cipher = AES.new(self.key, AES.MODE_CBC, IV=iv)
