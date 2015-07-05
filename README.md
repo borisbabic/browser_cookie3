@@ -1,4 +1,4 @@
-this is a python3 fork of https://github.com/borisbabic/browser_cookie3 
+this is a python3 fork of https://bitbucket.org/richardpenman/browser_cookie
 
 # Browser Cookie #
 
