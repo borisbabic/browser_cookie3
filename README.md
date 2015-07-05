@@ -11,7 +11,7 @@ this is a python3 fork of https://bitbucket.org/richardpenman/browser_cookie
 ```
 #!bash
 
-    pip install browser-cookie
+    pip3 install browser-cookie3
 
 ```
 
