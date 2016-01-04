@@ -35,12 +35,12 @@ And here is the webpage title when downloaded normally:
 'Git and Mercurial code management for teams'
 ```
 
-Now let's try with browser_cookie - make sure you are logged into Bitbucket in Firefox before trying this example:
+Now let's try with browser_cookie3 - make sure you are logged into Bitbucket in Firefox before trying this example:
 ```
 #!python
 
->>> import browser_cookie
->>> cj = browser_cookie.firefox()
+>>> import browser_cookie3
+>>> cj = browser_cookie3.firefox()
 >>> opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
 >>> login_html = opener.open(url).read()
 >>> get_title(login_html)
@@ -53,8 +53,9 @@ Here is an alternative example with [requests](http://docs.python-requests.org/e
 ```
 #!python
 
+>>> import browser_cookie3
 >>> import requests
->>> cj = browser_cookie.chrome()
+>>> cj = browser_cookie3.chrome()
 >>> r = requests.get(url, cookies=cj)
 >>> get_title(r.content)
 'richardpenman / home &mdash; Bitbucket'
@@ -63,7 +64,10 @@ Here is an alternative example with [requests](http://docs.python-requests.org/e
 Alternatively if you don't know/care which browser has the cookies you want then all available browser cookies can be loaded:
 ```
 #!python
->>> cj = browser_cookie.load()
+
+>>> import browser_cookie3
+>>> import requests
+>>> cj = browser_cookie3.load()
 >>> r = requests.get(url, cookies=cj)
 >>> get_title(r.content)
 'richardpenman / home &mdash; Bitbucket'
@@ -77,7 +81,7 @@ So far the following platforms are supported:
 * **Firefox:** Linux, OSX, Windows
  
 
-However I only tested on a single version of each browser and so am not sure if the cookie sqlite format changes location or format in earlier/later versions. If you experience a problem please [open an issue](https://bitbucket.org/richardpenman/browser_cookie/issues/new) which includes details of the browser version and operating system. Also patches to support other browsers are very welcome, particularly for Chrome and Internet Explorer on Windows.
+However I only tested on a single version of each browser and so am not sure if the cookie sqlite format changes location or format in earlier/later versions. If you experience a problem please [open an issue](https://github.com/borisbabic/browser_cookie3/issues/new) which includes details of the browser version and operating system. Also patches to support other browsers are very welcome, particularly for Chrome and Internet Explorer on Windows.
 
 
 ## Acknowledgements ##
