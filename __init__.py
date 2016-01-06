@@ -42,8 +42,6 @@ def create_local_copy(cookie_file):
     else:
         raise BrowserCookieError('Can not find cookie file at: ' + cookie_file)
 
-
-
 class Chrome:
     def __init__(self, cookie_file=None):
         self.salt = b'saltysalt'
@@ -209,3 +207,23 @@ def load():
         except BrowserCookieError:
             pass
     return cj
+
+def load_cookie_dict(browser_name, domain_name, cookie_file=None):
+    """Load cookies for the browser based on the given browser_name parameter
+    and return a dictionary containing key/value pairs for cookies for the
+    domain with the given domain_name. browser_name must either be chrome
+    or firefox.
+    """
+    # Load cookies based on browser
+    if browser_name.lower() == "chrome":
+        cj = chrome(cookie_file)
+    elif browser_name.lower() == "firefox":
+        cj = firefox(cookie_file)
+    else:
+        raise BrowserCookieError('Unsupported browser: ' + browser_name)
+    # Now filter by domain
+    cookie_dict = {}
+    for cookie in cj:
+        if domain_name in cookie.domain:
+            cookie_dict[cookie.name] = cookie.value
+    return cookie_dict
