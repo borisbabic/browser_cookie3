@@ -1,3 +1,5 @@
+This is a python3 fork of [Richard Penman's Browser Cookie](https://bitbucket.org/richardpenman/browser_cookie)
+
 # Browser Cookie #
 
 * ***What does it do?*** Loads cookies used by your web browser into a cookiejar object.
