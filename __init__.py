@@ -18,15 +18,13 @@ try:
 except ImportError:
     import sqlite3
 
-#import keyring
+#external dependencies
+import keyring
 import pyaes
 from pbkdf2 import PBKDF2
 
-
-
 class BrowserCookieError(Exception):
     pass
-
 
 def create_local_copy(cookie_file):
     """Make a local copy of the sqlite cookie database and return the new filename.
@@ -49,15 +47,14 @@ class Chrome:
         self.length = 16
         if sys.platform == 'darwin':
             # running Chrome on OSX
-            my_pass = keyring.get_password('Chrome Safe Storage', 'Chrome')
-            my_pass = my_pass.encode('utf8')
-            iterations = 1003
+            my_pass = keyring.get_password('Chrome Safe Storage', 'Chrome').encode('utf8') #get key from keyring
+            iterations = 1003 #number of pbkdf2 iterations on mac
             self.key = PBKDF2(my_pass, self.salt, iterations=iterations).read(self.length)
             cookie_file = cookie_file or os.path.expanduser('~/Library/Application Support/Google/Chrome/Default/Cookies')
 
         elif sys.platform.startswith('linux'):
             # running Chrome on Linux
-            my_pass = 'peanuts'.encode('utf8')
+            my_pass = 'peanuts'.encode('utf8') #chrome linux is encrypted with the key peanuts
             iterations = 1
             self.key = PBKDF2(my_pass, self.salt, iterations=iterations).read(self.length)
             cookie_file = cookie_file or os.path.expanduser('~/.config/google-chrome/Default/Cookies') or \
@@ -68,8 +65,7 @@ class Chrome:
             #Note: in windows the \\ is required before a u to stop unicode errors
             cookie_file = cookie_file or os.path.join(os.getenv('APPDATA',''),'..\Local\Google\Chrome\\User Data\Default\Cookies')
         else:
-            # XXX need to add Chrome on Windows support
-            raise BrowserCookieError("Currently only Chrome support for Linux and OSX.")
+            raise BrowserCookieError("OS not recognized. Works on Chrome for OSX, Windows, and Linux.")
         self.tmp_cookie_file = create_local_copy(cookie_file)
 
     def __del__(self):
@@ -79,7 +75,6 @@ class Chrome:
 
     def __str__(self):
         return 'chrome'
-
 
     def load(self):
         """Load sqlite cookies into a cookiejar
@@ -122,8 +117,6 @@ class Chrome:
         decrypted += cipher.feed()
         return decrypted.decode("utf-8")
 
-
-
 class Firefox:
     def __init__(self, cookie_file=None):
         cookie_file = cookie_file or self.find_cookie_file()
@@ -137,7 +130,6 @@ class Firefox:
 
     def __str__(self):
         return 'firefox'
-
 
     def find_cookie_file(self):
         if sys.platform == 'darwin':
@@ -168,7 +160,7 @@ class Firefox:
 
         if os.path.exists(self.session_file):
             try:
-                json_data = json.loads(open(self.session_file, 'rb').read())
+                json_data = json.loads(open(self.session_file, 'rb').read().decode())
             except ValueError as e:
                 print('Error parsing firefox session JSON:', str(e))
             else:
@@ -180,24 +172,20 @@ class Firefox:
 
         return cj
 
-
 def create_cookie(host, path, secure, expires, name, value):
     """Shortcut function to create a cookie
     """
     return http.cookiejar.Cookie(0, name, value, None, False, host, host.startswith('.'), host.startswith('.'), path, True, secure, expires, False, None, None, {})
-
 
 def chrome(cookie_file=None):
     """Returns a cookiejar of the cookies used by Chrome
     """
     return Chrome(cookie_file).load()
 
-
 def firefox(cookie_file=None):
     """Returns a cookiejar of the cookies and sessions used by Firefox
     """
     return Firefox(cookie_file).load()
-
 
 def load():
     """Try to load cookies from all supported browsers and return combined cookiejar
@@ -211,7 +199,7 @@ def load():
             pass
     return cj
 
-def load_cookie_dict(browser_name, domain_name, cookie_file=None):
+def domain(domain_name, browser_name="chrome", cookie_file=None):
     """Load cookies for the browser based on the given browser_name parameter
     and return a dictionary containing key/value pairs for cookies for the
     domain with the given domain_name. browser_name must either be chrome
@@ -225,11 +213,11 @@ def load_cookie_dict(browser_name, domain_name, cookie_file=None):
     else:
         raise BrowserCookieError('Unsupported browser: ' + browser_name)
     # Now filter by domain
-    cookie_dict = {}
+    domain_cookies = http.cookiejar.CookieJar()
     for cookie in cj:
         if domain_name in cookie.domain:
-            cookie_dict[cookie.name] = cookie.value
-    return cookie_dict
+            domain_cookies.set_cookie(cookie)
+    return domain_cookies
 
 if __name__ == '__main__':
-    chrome()
+    print(load())
