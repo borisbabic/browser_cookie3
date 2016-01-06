@@ -41,10 +41,12 @@ def create_local_copy(cookie_file):
         raise BrowserCookieError('Can not find cookie file at: ' + cookie_file)
 
 class Chrome:
-    def __init__(self, cookie_file=None):
+    def __init__(self, cookie_file=None, domain_name=""):
         self.salt = b'saltysalt'
         self.iv = b' ' * 16
         self.length = 16
+        # domain name to filter cookies by
+        self.domain_name = domain_name
         if sys.platform == 'darwin':
             # running Chrome on OSX
             my_pass = keyring.get_password('Chrome Safe Storage', 'Chrome').encode('utf8') #get key from keyring
@@ -81,7 +83,8 @@ class Chrome:
         """
         con = sqlite3.connect(self.tmp_cookie_file)
         cur = con.cursor()
-        cur.execute('SELECT host_key, path, secure, expires_utc, name, value, encrypted_value FROM cookies;')
+        cur.execute('SELECT host_key, path, secure, expires_utc, name, value, encrypted_value '\
+                'FROM cookies WHERE host_key like "%{}%";'.format(self.domain_name))
         cj = http.cookiejar.CookieJar()
         for item in cur.fetchall():
             host, path, secure, expires, name = item[:5]
@@ -118,11 +121,13 @@ class Chrome:
         return decrypted.decode("utf-8")
 
 class Firefox:
-    def __init__(self, cookie_file=None):
+    def __init__(self, cookie_file=None, domain_name=""):
         cookie_file = cookie_file or self.find_cookie_file()
         self.tmp_cookie_file = create_local_copy(cookie_file)
         # current sessions are saved in sessionstore.js
         self.session_file = os.path.join(os.path.dirname(cookie_file), 'sessionstore.js')
+        # domain name to filter cookies by
+        self.domain_name = domain_name
 
     def __del__(self):
         # remove temporary backup of sqlite cookie database
@@ -150,7 +155,8 @@ class Firefox:
     def load(self):
         con = sqlite3.connect(self.tmp_cookie_file)
         cur = con.cursor()
-        cur.execute('select host, path, isSecure, expiry, name, value from moz_cookies')
+        cur.execute('select host, path, isSecure, expiry, name, value from moz_cookies '\
+                 'where host like "%{}%"'.format(self.domain_name))
 
         cj = http.cookiejar.CookieJar()
         for item in cur.fetchall():
@@ -177,23 +183,26 @@ def create_cookie(host, path, secure, expires, name, value):
     """
     return http.cookiejar.Cookie(0, name, value, None, False, host, host.startswith('.'), host.startswith('.'), path, True, secure, expires, False, None, None, {})
 
-def chrome(cookie_file=None):
-    """Returns a cookiejar of the cookies used by Chrome
+def chrome(cookie_file=None, domain_name=""):
+    """Returns a cookiejar of the cookies used by Chrome. Optionally pass in a
+    domain name to only load cookies from the specified domain
     """
-    return Chrome(cookie_file).load()
+    return Chrome(cookie_file, domain_name).load()
 
-def firefox(cookie_file=None):
-    """Returns a cookiejar of the cookies and sessions used by Firefox
+def firefox(cookie_file=None, domain_name=""):
+    """Returns a cookiejar of the cookies and sessions used by Firefox. Optionally
+    pass in a domain name to only load cookies from the specified domain
     """
-    return Firefox(cookie_file).load()
+    return Firefox(cookie_file, domain_name).load()
 
-def load():
+def load(domain_name=""):
     """Try to load cookies from all supported browsers and return combined cookiejar
+    Optionally pass in a domain name to only load cookies from the specified domain
     """
     cj = http.cookiejar.CookieJar()
     for cookie_fn in [chrome, firefox]:
         try:
-            for cookie in cookie_fn():
+            for cookie in cookie_fn(domain_name=domain_name):
                 cj.set_cookie(cookie)
         except BrowserCookieError:
             pass
