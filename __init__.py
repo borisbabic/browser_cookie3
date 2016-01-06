@@ -18,7 +18,7 @@ try:
 except ImportError:
     import sqlite3
 
-import keyring
+#import keyring
 import pyaes
 from pbkdf2 import PBKDF2
 
@@ -52,21 +52,24 @@ class Chrome:
             my_pass = keyring.get_password('Chrome Safe Storage', 'Chrome')
             my_pass = my_pass.encode('utf8')
             iterations = 1003
+            self.key = PBKDF2(my_pass, self.salt, iterations=iterations).read(self.length)
             cookie_file = cookie_file or os.path.expanduser('~/Library/Application Support/Google/Chrome/Default/Cookies')
 
         elif sys.platform.startswith('linux'):
             # running Chrome on Linux
             my_pass = 'peanuts'.encode('utf8')
             iterations = 1
+            self.key = PBKDF2(my_pass, self.salt, iterations=iterations).read(self.length)
             cookie_file = cookie_file or os.path.expanduser('~/.config/google-chrome/Default/Cookies') or \
                                          os.path.expanduser('~/.config/chromium/Default/Cookies') or \
                                          os.path.expanduser('~/.config/google-chrome-beta/Default/Cookies')
-
+        elif sys.platform == "win32":
+            #get cookie file from APPDATA
+            #Note: in windows the \\ is required before a u to stop unicode errors
+            cookie_file = cookie_file or os.path.join(os.getenv('APPDATA',''),'..\Local\Google\Chrome\\User Data\Default\Cookies')
         else:
             # XXX need to add Chrome on Windows support
             raise BrowserCookieError("Currently only Chrome support for Linux and OSX.")
-
-        self.key = PBKDF2(my_pass, self.salt, iterations=iterations).read(self.length)
         self.tmp_cookie_file = create_local_copy(cookie_file)
 
     def __del__(self):
@@ -227,3 +230,6 @@ def load_cookie_dict(browser_name, domain_name, cookie_file=None):
         if domain_name in cookie.domain:
             cookie_dict[cookie.name] = cookie.value
     return cookie_dict
+
+if __name__ == '__main__':
+    chrome()
