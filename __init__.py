@@ -16,12 +16,12 @@ try:
     # otherwise will raise the "sqlite3.DatabaseError: file is encrypted or is not a database" exception
     from pysqlite2 import dbapi2 as sqlite3
 except ImportError:
-    import sqlite3 
+    import sqlite3
 
 import keyring
-from Crypto.Protocol.KDF import PBKDF2
-from Crypto.Cipher import AES
-        
+import pyaes
+from pbkdf2 import PBKDF2
+
 
 
 class BrowserCookieError(Exception):
@@ -42,12 +42,13 @@ def create_local_copy(cookie_file):
     else:
         raise BrowserCookieError('Can not find cookie file at: ' + cookie_file)
 
-       
+
 
 class Chrome:
     def __init__(self, cookie_file=None):
-        salt = b'saltysalt'
-        length = 16
+        self.salt = b'saltysalt'
+        self.iv = b' ' * 16
+        self.length = 16
         if sys.platform == 'darwin':
             # running Chrome on OSX
             my_pass = keyring.get_password('Chrome Safe Storage', 'Chrome')
@@ -64,10 +65,10 @@ class Chrome:
                                          os.path.expanduser('~/.config/google-chrome-beta/Default/Cookies')
 
         else:
-            # XXX need to add Chrome on Windows support 
+            # XXX need to add Chrome on Windows support
             raise BrowserCookieError("Currently only Chrome support for Linux and OSX.")
 
-        self.key = PBKDF2(my_pass, salt, length, iterations)
+        self.key = PBKDF2(my_pass, self.salt, iterations=iterations).read(self.length)
         self.tmp_cookie_file = create_local_copy(cookie_file)
 
     def __del__(self):
@@ -100,11 +101,12 @@ class Chrome:
         """
         if value or (encrypted_value[:3] != b'v10'):
             return value
-    
-        # Encrypted cookies should be prefixed with 'v10' according to the 
+
+        # Encrypted cookies should be prefixed with 'v10' according to the
         # Chromium code. Strip it off.
         encrypted_value = encrypted_value[3:]
- 
+        encrypted_value_half_len = int(len(encrypted_value) / 2)
+
         # Strip padding by taking off number indicated by padding
         # eg if last is '\x0e' then ord('\x0e') == 14, so take off 14.
         # You'll need to change this function to use ord() for python2.
@@ -113,10 +115,11 @@ class Chrome:
             decoded = x.decode()
             return decoded[:-trailing]
 
-        iv = b' ' * 16
-        cipher = AES.new(self.key, AES.MODE_CBC, IV=iv)
-        decrypted = cipher.decrypt(encrypted_value)
-        return clean(decrypted)
+        cipher = pyaes.Decrypter(pyaes.AESModeOfOperationCBC(self.key, self.iv))
+        decrypted = cipher.feed(encrypted_value[:encrypted_value_half_len])
+        decrypted += cipher.feed(encrypted_value[encrypted_value_half_len:])
+        decrypted += cipher.feed()
+        return decrypted.decode("utf-8")
 
 
 
@@ -126,7 +129,7 @@ class Firefox:
         self.tmp_cookie_file = create_local_copy(cookie_file)
         # current sessions are saved in sessionstore.js
         self.session_file = os.path.join(os.path.dirname(cookie_file), 'sessionstore.js')
-           
+
     def __del__(self):
         # remove temporary backup of sqlite cookie database
         os.remove(self.tmp_cookie_file)
