@@ -1,10 +1,3 @@
-# Browser Cookie Fork #
-
-This fork changes some of the functionality of the great browser cookie library. We hope to:
-* Change dependencies to smaller more focused libraries than pyCrypto (which is often difficult to install.)
-* Add support for Chrome on Windows.
-* Possibly push some of the changes upstream.
-
 # Browser Cookie #
 
 * ***What does it do?*** Loads cookies used by your web browser into a cookiejar object.
@@ -78,11 +71,22 @@ Alternatively if you don't know/care which browser has the cookies you want then
 'richardpenman / home &mdash; Bitbucket'
 ```
 
+Alternatively if you are only interested in cookies from a specific domain, you can use the domain function to automatically filter them.
+```
+#!python
+
+>>> import browser_cookie3
+>>> import requests
+>>> cj = browser_cookie3.domain('www.bitbucket.com')
+>>> r = requests.get(url, cookies=cj)
+>>> get_title(r.content)
+'richardpenman / home &mdash; Bitbucket'
+```
 
 ## Contribute ##
 So far the following platforms are supported:
 
-* **Chrome:** Linux, OSX
+* **Chrome:** Linux, OSX, Windows
 * **Firefox:** Linux, OSX, Windows
 
 
