@@ -138,7 +138,7 @@ class Firefox:
 
     def find_cookie_file(self):
         if sys.platform == 'darwin':
-            cookie_files = glob.glob(os.path.expanduser(r'~\AppData\Roaming\Mozilla\Firefox\Profiles\*.default\cookies.sqlite'))
+            cookie_files = glob.glob(os.path.expanduser('~/Library/Application Support/Firefox/Profiles/*.default/cookies.sqlite'))
         elif sys.platform.startswith('linux'):
             cookie_files = glob.glob(os.path.expanduser('~/.mozilla/firefox/*.default/cookies.sqlite'))
         elif sys.platform == 'win32':
