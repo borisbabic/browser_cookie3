@@ -1,8 +1,13 @@
-this is a python3 fork of https://bitbucket.org/richardpenman/browser_cookie
+# Browser Cookie Fork #
+
+This fork changes some of the functionality of the great browser cookie library. We hope to:
+* Change dependencies to smaller more focused libraries than pyCrypto (which is often difficult to install.)
+* Add support for Chrome on Windows.
+* Possibly push some of the changes upstream.
 
 # Browser Cookie #
 
-* ***What does it do?*** Loads cookies used by your web browser into a cookiejar object. 
+* ***What does it do?*** Loads cookies used by your web browser into a cookiejar object.
 * ***Why is it useful?*** This means you can use python to download and get the same content you see in the web browser without needing to login.
 * ***Which browsers are supported?*** Currently Chrome and Firefox.
 * ***How are the cookies stored?*** In a sqlite database in your home directory.
@@ -79,7 +84,7 @@ So far the following platforms are supported:
 
 * **Chrome:** Linux, OSX
 * **Firefox:** Linux, OSX, Windows
- 
+
 
 However I only tested on a single version of each browser and so am not sure if the cookie sqlite format changes location or format in earlier/later versions. If you experience a problem please [open an issue](https://github.com/borisbabic/browser_cookie3/issues/new) which includes details of the browser version and operating system. Also patches to support other browsers are very welcome, particularly for Chrome and Internet Explorer on Windows.
 
