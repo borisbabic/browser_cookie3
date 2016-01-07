@@ -73,13 +73,13 @@ Alternatively if you don't know/care which browser has the cookies you want then
 'richardpenman / home &mdash; Bitbucket'
 ```
 
-Alternatively if you are only interested in cookies from a specific domain, you can use the domain function to automatically filter them.
+Alternatively if you are only interested in cookies from a specific domain, you can specify a domain filter.
 ```
 #!python
 
 >>> import browser_cookie3
 >>> import requests
->>> cj = browser_cookie3.domain('www.bitbucket.com')
+>>> cj = browser_cookie3.chrome('www.bitbucket.com')
 >>> r = requests.get(url, cookies=cj)
 >>> get_title(r.content)
 'richardpenman / home &mdash; Bitbucket'
@@ -91,6 +91,13 @@ So far the following platforms are supported:
 * **Chrome:** Linux, OSX, Windows
 * **Firefox:** Linux, OSX, Windows
 
+## Testing Dates  ##
+
+OS      | Chrome | Firefox |
+:------ | :----: | :-----: |
+Mac     | 1/6/16 | 1/6/16  |
+Linux   | 1/6/16 | 1/6/16  |
+Windows | 1/6/16 | n/a     |
 
 However I only tested on a single version of each browser and so am not sure if the cookie sqlite format changes location or format in earlier/later versions. If you experience a problem please [open an issue](https://github.com/borisbabic/browser_cookie3/issues/new) which includes details of the browser version and operating system. Also patches to support other browsers are very welcome, particularly for Chrome and Internet Explorer on Windows.
 
