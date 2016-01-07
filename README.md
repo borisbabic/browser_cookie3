@@ -1,8 +1,8 @@
-this is a python3 fork of https://bitbucket.org/richardpenman/browser_cookie
+This is a python3 fork of [Richard Penman's Browser Cookie](https://bitbucket.org/richardpenman/browsercookie)
 
 # Browser Cookie #
 
-* ***What does it do?*** Loads cookies used by your web browser into a cookiejar object. 
+* ***What does it do?*** Loads cookies used by your web browser into a cookiejar object.
 * ***Why is it useful?*** This means you can use python to download and get the same content you see in the web browser without needing to login.
 * ***Which browsers are supported?*** Currently Chrome and Firefox.
 * ***How are the cookies stored?*** In a sqlite database in your home directory.
@@ -73,16 +73,33 @@ Alternatively if you don't know/care which browser has the cookies you want then
 'richardpenman / home &mdash; Bitbucket'
 ```
 
+Alternatively if you are only interested in cookies from a specific domain, you can specify a domain filter.
+```
+#!python
+
+>>> import browser_cookie3
+>>> import requests
+>>> cj = browser_cookie3.chrome('www.bitbucket.com')
+>>> r = requests.get(url, cookies=cj)
+>>> get_title(r.content)
+'richardpenman / home &mdash; Bitbucket'
+```
 
 ## Contribute ##
 So far the following platforms are supported:
 
-* **Chrome:** Linux, OSX
+* **Chrome:** Linux, OSX, Windows
 * **Firefox:** Linux, OSX, Windows
- 
+
+## Testing Dates  ##
+
+OS      | Chrome | Firefox |
+:------ | :----: | :-----: |
+Mac     | 1/6/16 | 1/6/16  |
+Linux   | 1/6/16 | 1/6/16  |
+Windows | 1/6/16 | n/a     |
 
 However I only tested on a single version of each browser and so am not sure if the cookie sqlite format changes location or format in earlier/later versions. If you experience a problem please [open an issue](https://github.com/borisbabic/browser_cookie3/issues/new) which includes details of the browser version and operating system. Also patches to support other browsers are very welcome, particularly for Chrome and Internet Explorer on Windows.
-
 
 ## Acknowledgements ##
 Special thanks to Nathan Henrie for his example of [how to decode the Chrome cookies](http://n8henrie.com/2013/11/use-chromes-cookies-for-easier-downloading-with-python-requests/).
