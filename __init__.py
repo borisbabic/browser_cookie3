@@ -208,25 +208,5 @@ def load(domain_name=""):
             pass
     return cj
 
-def domain(domain_name, browser_name="chrome", cookie_file=None):
-    """Load cookies for the browser based on the given browser_name parameter
-    and return a dictionary containing key/value pairs for cookies for the
-    domain with the given domain_name. browser_name must either be chrome
-    or firefox.
-    """
-    # Load cookies based on browser
-    if browser_name.lower() == "chrome":
-        cj = chrome(cookie_file)
-    elif browser_name.lower() == "firefox":
-        cj = firefox(cookie_file)
-    else:
-        raise BrowserCookieError('Unsupported browser: ' + browser_name)
-    # Now filter by domain
-    domain_cookies = http.cookiejar.CookieJar()
-    for cookie in cj:
-        if domain_name in cookie.domain:
-            domain_cookies.set_cookie(cookie)
-    return domain_cookies
-
 if __name__ == '__main__':
     print(load())
