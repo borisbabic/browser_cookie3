@@ -1,4 +1,14 @@
 # -*- coding: utf-8 -*-
+"""
+Updates:
+
+* Added support for Chrome on Windows.
+* Fixed an error with Firefox on Mac cookies location.
+* Fixed decode error on Firefox for Linux.
+* Changed dependencies: no longer uses pyCrypto. This is in part because pyCrypto has a lot of dependencies itself and can be difficult to install on some systems, and also because there were already small libraries for just performing the functions that this library needs. Now using pyAES and PBKDF2.
+* Added the domain() function. Simple function that filters results for a single domain if you don't need all of them.
+
+"""
 __doc__ = 'Load browser cookies into a cookiejar'
 
 import os
