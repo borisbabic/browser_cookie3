@@ -94,10 +94,26 @@ class Chrome:
         con.close()
         return cj
 
+    def _decrypt_windows_chrome(self, value, encrypted_value):
+        from win32crypt import CryptUnprotectData
+
+        if len(value) != 0:
+            return value
+
+        if encrypted_value == "":
+            return ""
+        
+        CRYPTPROTECT_UI_FORBIDDEN = 0x01
+        _, data = CryptUnprotectData(encrypted_value, None, None, None, CRYPTPROTECT_UI_FORBIDDEN)
+        assert isinstance(data, bytes)
+        return data.decode()
 
     def _decrypt(self, value, encrypted_value):
         """Decrypt encoded cookies
         """
+        if sys.platform == 'win32':
+            return self._decrypt_windows_chrome(value, encrypted_value)
+            
         if value or (encrypted_value[:3] != b'v10'):
             return value
 
