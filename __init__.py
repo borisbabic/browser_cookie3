@@ -40,6 +40,40 @@ def create_local_copy(cookie_file):
     else:
         raise BrowserCookieError('Can not find cookie file at: ' + cookie_file)
 
+# Code adapted slightly from https://github.com/Arnie97/chrome-cookies
+def CryptUnprotectData(
+    cipher_text=b'', entropy=b'', reserved=None, prompt_struct=None
+):
+    # we know that we're running under windows at this point so it's safe to try these imports
+    import ctypes
+    import ctypes.wintypes
+
+    class DATA_BLOB(ctypes.Structure):
+        _fields_ = [
+            ('cbData', ctypes.wintypes.DWORD),
+            ('pbData', ctypes.POINTER(ctypes.c_char))
+        ]
+
+    blob_in, blob_entropy, blob_out = map(
+        lambda x: DATA_BLOB(len(x), ctypes.create_string_buffer(x)),
+        [cipher_text, entropy, b'']
+    )
+    desc = ctypes.c_wchar_p()
+
+    CRYPTPROTECT_UI_FORBIDDEN = 0x01
+
+    if not ctypes.windll.crypt32.CryptUnprotectData(
+        ctypes.byref(blob_in), ctypes.byref(desc), ctypes.byref(blob_entropy),
+        reserved, prompt_struct, CRYPTPROTECT_UI_FORBIDDEN, ctypes.byref(blob_out)
+    ):
+        raise RuntimeError('Failed to decrypt the cipher text with DPAPI')
+
+    description = desc.value
+    buffer_out = ctypes.create_string_buffer(int(blob_out.cbData))
+    ctypes.memmove(buffer_out, blob_out.pbData, blob_out.cbData)
+    map(ctypes.windll.kernel32.LocalFree, [desc, blob_out.pbData])
+    return description, buffer_out.value
+
 class Chrome:
     def __init__(self, cookie_file=None, domain_name=""):
         self.salt = b'saltysalt'
@@ -95,7 +129,6 @@ class Chrome:
         return cj
 
     def _decrypt_windows_chrome(self, value, encrypted_value):
-        from win32crypt import CryptUnprotectData
 
         if len(value) != 0:
             return value
@@ -103,17 +136,17 @@ class Chrome:
         if encrypted_value == "":
             return ""
         
-        CRYPTPROTECT_UI_FORBIDDEN = 0x01
-        _, data = CryptUnprotectData(encrypted_value, None, None, None, CRYPTPROTECT_UI_FORBIDDEN)
+        _, data = CryptUnprotectData(encrypted_value)
         assert isinstance(data, bytes)
         return data.decode()
 
     def _decrypt(self, value, encrypted_value):
         """Decrypt encoded cookies
         """
+
         if sys.platform == 'win32':
             return self._decrypt_windows_chrome(value, encrypted_value)
-            
+
         if value or (encrypted_value[:3] != b'v10'):
             return value
 
