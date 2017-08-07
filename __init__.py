@@ -2,6 +2,7 @@
 __doc__ = 'Load browser cookies into a cookiejar'
 
 import os
+import os.path
 import sys
 import time
 import glob
@@ -39,6 +40,21 @@ def create_local_copy(cookie_file):
         return tmp_cookie_file
     else:
         raise BrowserCookieError('Can not find cookie file at: ' + cookie_file)
+
+def windows_group_policy_path():
+    # we know that we're running under windows at this point so it's safe to do these imports
+    from winreg import ConnectRegistry, HKEY_LOCAL_MACHINE, OpenKeyEx, QueryValueEx, REG_EXPAND_SZ, REG_SZ
+    try:
+        root = ConnectRegistry(None, HKEY_LOCAL_MACHINE)
+        policy_key = OpenKeyEx(root, r"SOFTWARE\Policies\Google\Chrome")
+        user_data_dir, type_ = QueryValueEx(policy_key, "UserDataDir")
+        if type_ == REG_EXPAND_SZ:
+            user_data_dir = os.path.expandvars(user_data_dir)
+        elif type_ != REG_SZ:
+            return None
+    except OSError:
+        return None
+    return os.path.join(user_data_dir, "Default", "Cookies")
 
 # Code adapted slightly from https://github.com/Arnie97/chrome-cookies
 def CryptUnprotectData(
@@ -99,7 +115,7 @@ class Chrome:
         elif sys.platform == "win32":
             #get cookie file from APPDATA
             #Note: in windows the \\ is required before a u to stop unicode errors
-            cookie_file = cookie_file or os.path.join(os.getenv('APPDATA',''),'..\Local\Google\Chrome\\User Data\Default\Cookies')
+            cookie_file = cookie_file or windows_group_policy_path() or os.path.join(os.getenv('APPDATA',''),'..\Local\Google\Chrome\\User Data\Default\Cookies')
         else:
             raise BrowserCookieError("OS not recognized. Works on Chrome for OSX, Windows, and Linux.")
         self.tmp_cookie_file = create_local_copy(cookie_file)
