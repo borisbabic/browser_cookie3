@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-__doc__ = 'Load browser cookies into a cookiejar'
 
 import os
 import os.path
@@ -8,6 +7,7 @@ import time
 import glob
 import http.cookiejar
 import tempfile
+
 try:
     import json
 except ImportError:
@@ -19,13 +19,17 @@ try:
 except ImportError:
     import sqlite3
 
-#external dependencies
+# external dependencies
 import keyring
 import pyaes
 from pbkdf2 import PBKDF2
 
+__doc__ = 'Load browser cookies into a cookiejar'
+
+
 class BrowserCookieError(Exception):
     pass
+
 
 def create_local_copy(cookie_file):
     """Make a local copy of the sqlite cookie database and return the new filename.
@@ -40,6 +44,7 @@ def create_local_copy(cookie_file):
         return tmp_cookie_file
     else:
         raise BrowserCookieError('Can not find cookie file at: ' + cookie_file)
+
 
 def windows_group_policy_path():
     # we know that we're running under windows at this point so it's safe to do these imports
@@ -56,22 +61,23 @@ def windows_group_policy_path():
         return None
     return os.path.join(user_data_dir, "Default", "Cookies")
 
+
 # Code adapted slightly from https://github.com/Arnie97/chrome-cookies
-def CryptUnprotectData(
-    cipher_text=b'', entropy=b'', reserved=None, prompt_struct=None
+def crypt_unprotect_data(
+        cipher_text=b'', entropy=b'', reserved=None, prompt_struct=None
 ):
     # we know that we're running under windows at this point so it's safe to try these imports
     import ctypes
     import ctypes.wintypes
 
-    class DATA_BLOB(ctypes.Structure):
+    class DataBlob(ctypes.Structure):
         _fields_ = [
             ('cbData', ctypes.wintypes.DWORD),
             ('pbData', ctypes.POINTER(ctypes.c_char))
         ]
 
     blob_in, blob_entropy, blob_out = map(
-        lambda x: DATA_BLOB(len(x), ctypes.create_string_buffer(x)),
+        lambda x: DataBlob(len(x), ctypes.create_string_buffer(x)),
         [cipher_text, entropy, b'']
     )
     desc = ctypes.c_wchar_p()
@@ -79,8 +85,8 @@ def CryptUnprotectData(
     CRYPTPROTECT_UI_FORBIDDEN = 0x01
 
     if not ctypes.windll.crypt32.CryptUnprotectData(
-        ctypes.byref(blob_in), ctypes.byref(desc), ctypes.byref(blob_entropy),
-        reserved, prompt_struct, CRYPTPROTECT_UI_FORBIDDEN, ctypes.byref(blob_out)
+            ctypes.byref(blob_in), ctypes.byref(desc), ctypes.byref(blob_entropy),
+            reserved, prompt_struct, CRYPTPROTECT_UI_FORBIDDEN, ctypes.byref(blob_out)
     ):
         raise RuntimeError('Failed to decrypt the cipher text with DPAPI')
 
@@ -89,6 +95,7 @@ def CryptUnprotectData(
     ctypes.memmove(buffer_out, blob_out.pbData, blob_out.cbData)
     map(ctypes.windll.kernel32.LocalFree, [desc, blob_out.pbData])
     return description, buffer_out.value
+
 
 class Chrome:
     def __init__(self, cookie_file=None, domain_name=""):
@@ -99,30 +106,32 @@ class Chrome:
         self.domain_name = domain_name
         if sys.platform == 'darwin':
             # running Chrome on OSX
-            my_pass = keyring.get_password('Chrome Safe Storage', 'Chrome').encode('utf8') #get key from keyring
-            iterations = 1003 #number of pbkdf2 iterations on mac
+            my_pass = keyring.get_password('Chrome Safe Storage', 'Chrome').encode('utf8')  # get key from keyring
+            iterations = 1003  # number of pbkdf2 iterations on mac
             self.key = PBKDF2(my_pass, self.salt, iterations=iterations).read(self.length)
-            cookie_file = cookie_file or os.path.expanduser('~/Library/Application Support/Google/Chrome/Default/Cookies')
+            cookie_file = cookie_file or os.path.expanduser('~/Library/Application '
+                                                            'Support/Google/Chrome/Default/Cookies')
 
         elif sys.platform.startswith('linux'):
             # running Chrome on Linux
-            my_pass = 'peanuts'.encode('utf8') #chrome linux is encrypted with the key peanuts
+            my_pass = 'peanuts'.encode('utf8')  # chrome linux is encrypted with the key peanuts
             iterations = 1
             self.key = PBKDF2(my_pass, self.salt, iterations=iterations).read(self.length)
             cookie_file = cookie_file or os.path.expanduser('~/.config/google-chrome/Default/Cookies') or \
-                                         os.path.expanduser('~/.config/chromium/Default/Cookies') or \
-                                         os.path.expanduser('~/.config/google-chrome-beta/Default/Cookies')
+                          os.path.expanduser('~/.config/chromium/Default/Cookies') or \
+                          os.path.expanduser('~/.config/google-chrome-beta/Default/Cookies')
         elif sys.platform == "win32":
-            #get cookie file from APPDATA
-            #Note: in windows the \\ is required before a u to stop unicode errors
-            cookie_file = cookie_file or windows_group_policy_path() or os.path.join(os.getenv('APPDATA',''),'..\Local\Google\Chrome\\User Data\Default\Cookies')
+            # get cookie file from APPDATA
+            # Note: in windows the \\ is required before a u to stop unicode errors
+            cookie_file = cookie_file or windows_group_policy_path() or \
+                          os.path.join(os.getenv('APPDATA', ''), '..\Local\Google\Chrome\\User Data\Default\Cookies')
         else:
             raise BrowserCookieError("OS not recognized. Works on Chrome for OSX, Windows, and Linux.")
         self.tmp_cookie_file = create_local_copy(cookie_file)
 
     def __del__(self):
         # remove temporary backup of sqlite cookie database
-        if (hasattr(self, 'tmp_cookie_file')): #if there was an error till here
+        if hasattr(self, 'tmp_cookie_file'):  # if there was an error till here
             os.remove(self.tmp_cookie_file)
 
     def __str__(self):
@@ -133,8 +142,8 @@ class Chrome:
         """
         con = sqlite3.connect(self.tmp_cookie_file)
         cur = con.cursor()
-        cur.execute('SELECT host_key, path, secure, expires_utc, name, value, encrypted_value '\
-                'FROM cookies WHERE host_key like "%{}%";'.format(self.domain_name))
+        cur.execute('SELECT host_key, path, secure, expires_utc, name, value, encrypted_value '
+                    'FROM cookies WHERE host_key like "%{}%";'.format(self.domain_name))
         cj = http.cookiejar.CookieJar()
         for item in cur.fetchall():
             host, path, secure, expires, name = item[:5]
@@ -144,15 +153,16 @@ class Chrome:
         con.close()
         return cj
 
-    def _decrypt_windows_chrome(self, value, encrypted_value):
+    @staticmethod
+    def _decrypt_windows_chrome(value, encrypted_value):
 
         if len(value) != 0:
             return value
 
         if encrypted_value == "":
             return ""
-        
-        _, data = CryptUnprotectData(encrypted_value)
+
+        _, data = crypt_unprotect_data(encrypted_value)
         assert isinstance(data, bytes)
         return data.decode()
 
@@ -171,19 +181,12 @@ class Chrome:
         encrypted_value = encrypted_value[3:]
         encrypted_value_half_len = int(len(encrypted_value) / 2)
 
-        # Strip padding by taking off number indicated by padding
-        # eg if last is '\x0e' then ord('\x0e') == 14, so take off 14.
-        # You'll need to change this function to use ord() for python2.
-        def clean(x):
-            trailing = x[-1]
-            decoded = x.decode()
-            return decoded[:-trailing]
-
         cipher = pyaes.Decrypter(pyaes.AESModeOfOperationCBC(self.key, self.iv))
         decrypted = cipher.feed(encrypted_value[:encrypted_value_half_len])
         decrypted += cipher.feed(encrypted_value[encrypted_value_half_len:])
         decrypted += cipher.feed()
         return decrypted.decode("utf-8")
+
 
 class Firefox:
     def __init__(self, cookie_file=None, domain_name=""):
@@ -203,15 +206,20 @@ class Firefox:
     def __str__(self):
         return 'firefox'
 
-    def find_cookie_file(self):
+    @staticmethod
+    def find_cookie_file():
         if sys.platform == 'darwin':
-            cookie_files = glob.glob(os.path.expanduser('~/Library/Application Support/Firefox/Profiles/*.default/cookies.sqlite'))
+            cookie_files = glob.glob(
+                os.path.expanduser('~/Library/Application Support/Firefox/Profiles/*.default/cookies.sqlite'))
         elif sys.platform.startswith('linux'):
             cookie_files = glob.glob(os.path.expanduser('~/.mozilla/firefox/*.default/cookies.sqlite'))
         elif sys.platform == 'win32':
-            cookie_files = glob.glob(os.path.join(os.environ.get('PROGRAMFILES', ''), 'Mozilla Firefox/profile/cookies.sqlite')) or \
-                           glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)', ''), 'Mozilla Firefox/profile/cookies.sqlite')) or \
-                           glob.glob(os.path.join(os.environ.get('APPDATA', ''), 'Mozilla/Firefox/Profiles/*.default/cookies.sqlite'))
+            cookie_files = glob.glob(
+                os.path.join(os.environ.get('PROGRAMFILES', ''), 'Mozilla Firefox/profile/cookies.sqlite')) or \
+                           glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)', ''),
+                                                  'Mozilla Firefox/profile/cookies.sqlite')) or \
+                           glob.glob(os.path.join(os.environ.get('APPDATA', ''),
+                                                  'Mozilla/Firefox/Profiles/*.default/cookies.sqlite'))
         else:
             raise BrowserCookieError('Unsupported operating system: ' + sys.platform)
         if cookie_files:
@@ -219,12 +227,11 @@ class Firefox:
         else:
             raise BrowserCookieError('Failed to find Firefox cookie')
 
-
     def load(self):
         con = sqlite3.connect(self.tmp_cookie_file)
         cur = con.cursor()
-        cur.execute('select host, path, isSecure, expiry, name, value from moz_cookies '\
-                 'where host like "%{}%"'.format(self.domain_name))
+        cur.execute('select host, path, isSecure, expiry, name, value from moz_cookies '
+                    'where host like "%{}%"'.format(self.domain_name))
 
         cj = http.cookiejar.CookieJar()
         for item in cur.fetchall():
@@ -241,15 +248,19 @@ class Firefox:
                 expires = str(int(time.time()) + 3600 * 24 * 7)
                 for window in json_data.get('windows', []):
                     for cookie in window.get('cookies', []):
-                        c = create_cookie(cookie.get('host', ''), cookie.get('path', ''), False, expires, cookie.get('name', ''), cookie.get('value', ''))
+                        c = create_cookie(cookie.get('host', ''), cookie.get('path', ''), False, expires,
+                                          cookie.get('name', ''), cookie.get('value', ''))
                         cj.set_cookie(c)
 
         return cj
 
+
 def create_cookie(host, path, secure, expires, name, value):
     """Shortcut function to create a cookie
     """
-    return http.cookiejar.Cookie(0, name, value, None, False, host, host.startswith('.'), host.startswith('.'), path, True, secure, expires, False, None, None, {})
+    return http.cookiejar.Cookie(0, name, value, None, False, host, host.startswith('.'), host.startswith('.'), path,
+                                 True, secure, expires, False, None, None, {})
+
 
 def chrome(cookie_file=None, domain_name=""):
     """Returns a cookiejar of the cookies used by Chrome. Optionally pass in a
@@ -257,11 +268,13 @@ def chrome(cookie_file=None, domain_name=""):
     """
     return Chrome(cookie_file, domain_name).load()
 
+
 def firefox(cookie_file=None, domain_name=""):
     """Returns a cookiejar of the cookies and sessions used by Firefox. Optionally
     pass in a domain name to only load cookies from the specified domain
     """
     return Firefox(cookie_file, domain_name).load()
+
 
 def load(domain_name=""):
     """Try to load cookies from all supported browsers and return combined cookiejar
@@ -275,6 +288,7 @@ def load(domain_name=""):
         except BrowserCookieError:
             pass
     return cj
+
 
 if __name__ == '__main__':
     print(load())
