@@ -79,7 +79,7 @@ Alternatively if you are only interested in cookies from a specific domain, you 
 
 >>> import browser_cookie3
 >>> import requests
->>> cj = browser_cookie3.chrome('www.bitbucket.com')
+>>> cj = browser_cookie3.chrome(domain_name='www.bitbucket.com')
 >>> r = requests.get(url, cookies=cj)
 >>> get_title(r.content)
 'richardpenman / home &mdash; Bitbucket'
