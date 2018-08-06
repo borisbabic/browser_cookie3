@@ -84,6 +84,14 @@ Alternatively if you are only interested in cookies from a specific domain, you 
 >>> get_title(r.content)
 'richardpenman / home &mdash; Bitbucket'
 ```
+## Fresh cookie files
+Creating and testing a fresh cookie file can help eliminate some possible user specific issues. It also allows you to upload a cookie file you are having issus with, since you should never upload your main cookie file!
+### Chrome and chromium
+For linux and assumably mac:
+
+Run `google-chrome-stable --user-data-dir=browser_cookie3 #replace google-chrome-stable with your command to start chrome/chromium` and when you close the browser you will have a new cookie file at `browser_cookie3/Default/Cookies`
+
+If you want to share a cookie file then visit some site that will generate cookie (without logging in!), example https://www.theverge.com/ will save cookies after you accept the GDPR notice.
 
 ## Contribute ##
 So far the following platforms are supported:
