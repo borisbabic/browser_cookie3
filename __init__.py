@@ -124,7 +124,8 @@ class Chrome:
             # get cookie file from APPDATA
             # Note: in windows the \\ is required before a u to stop unicode errors
             cookie_file = cookie_file or windows_group_policy_path() or \
-                          os.path.join(os.getenv('APPDATA', ''), '..\Local\Google\Chrome\\User Data\Default\Cookies')
+                          os.path.join(os.getenv('APPDATA', ''), '\\Google\\Chrome\\User Data\\Default\\Cookies') or \
+                          os.path.join(os.getenv('LOCALAPPDATA', ''), '\\Google\\Chrome\\User Data\\Default\\Cookies')
         else:
             raise BrowserCookieError("OS not recognized. Works on Chrome for OSX, Windows, and Linux.")
         self.tmp_cookie_file = create_local_copy(cookie_file)
@@ -226,6 +227,8 @@ class Firefox:
                            glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)', ''),
                                                   'Mozilla Firefox/profile/cookies.sqlite')) or \
                            glob.glob(os.path.join(os.environ.get('APPDATA', ''),
+                                                  'Mozilla/Firefox/Profiles/*.default*/cookies.sqlite')) or \
+                            glob.glob(os.path.join(os.environ.get('LOCALAPPDATA', ''),
                                                   'Mozilla/Firefox/Profiles/*.default*/cookies.sqlite'))
         else:
             raise BrowserCookieError('Unsupported operating system: ' + sys.platform)
