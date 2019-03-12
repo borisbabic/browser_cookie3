@@ -124,12 +124,18 @@ class Chrome:
         elif sys.platform == "win32":
             # get cookie file from APPDATA
             # Note: in windows the \\ is required before a u to stop unicode errors
-            cookie_file = cookie_file \
-                or windows_group_policy_path() \
-                or os.path.join(os.getenv('APPDATA', ''), 
-                    '\\Google\\Chrome\\User Data\\Default\\Cookies') \
-                or os.path.join(os.getenv('LOCALAPPDATA', ''), 
-                    '\\Google\\Chrome\\User Data\\Default\\Cookies')
+            cookie_file = cookie_file or windows_group_policy_path()
+            if not cookie_file:
+                appDataPath = 'Google\\Chrome\\User Data\\Default\\Cookies'
+                if os.path.exists(os.path.join(os.getenv('LOCALAPPDATA', ''), appDataPath)):
+                    cookie_file = os.path.join(
+                        os.getenv('LOCALAPPDATA', ''), appDataPath)
+                elif os.path.exists(os.path.join(os.getenv('APPDATA', ''), appDataPath)):
+                    cookie_file = os.path.join(
+                        os.getenv('APPDATA', ''), appDataPath)
+                elif os.path.exists(os.path.join(os.getenv('APPDATA', ''), '..\Local\\' + appDataPath)):
+                    cookie_file = os.path.join(
+                        os.getenv('APPDATA', ''), '..\Local\\' + appDataPath)
         else:
             raise BrowserCookieError("OS not recognized. Works on Chrome for OSX, Windows, and Linux.")
         self.tmp_cookie_file = create_local_copy(cookie_file)
