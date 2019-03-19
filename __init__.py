@@ -109,22 +109,25 @@ class Chrome:
             my_pass = keyring.get_password('Chrome Safe Storage', 'Chrome').encode('utf8')  # get key from keyring
             iterations = 1003  # number of pbkdf2 iterations on mac
             self.key = PBKDF2(my_pass, self.salt, iterations=iterations).read(self.length)
-            cookie_file = cookie_file or os.path.expanduser('~/Library/Application '
-                                                            'Support/Google/Chrome/Default/Cookies')
+            cookie_file = cookie_file \
+                or os.path.expanduser('~/Library/Application Support/Google/Chrome/Default/Cookies')
 
         elif sys.platform.startswith('linux'):
             # running Chrome on Linux
             my_pass = 'peanuts'.encode('utf8')  # chrome linux is encrypted with the key peanuts
             iterations = 1
             self.key = PBKDF2(my_pass, self.salt, iterations=iterations).read(self.length)
-            cookie_file = cookie_file or os.path.expanduser('~/.config/google-chrome/Default/Cookies') or \
-                          os.path.expanduser('~/.config/chromium/Default/Cookies') or \
-                          os.path.expanduser('~/.config/google-chrome-beta/Default/Cookies')
+            cookie_file = cookie_file \
+                or os.path.expanduser('~/.config/google-chrome/Default/Cookies') \
+                or os.path.expanduser('~/.config/chromium/Default/Cookies') \
+                or os.path.expanduser('~/.config/google-chrome-beta/Default/Cookies')
         elif sys.platform == "win32":
             # get cookie file from APPDATA
             # Note: in windows the \\ is required before a u to stop unicode errors
-            cookie_file = cookie_file or windows_group_policy_path() or \
-                          os.path.join(os.getenv('APPDATA', ''), '..\Local\Google\Chrome\\User Data\Default\Cookies')
+            cookie_file = cookie_file or windows_group_policy_path() \
+                or glob.glob(os.path.join(os.getenv('APPDATA', ''), '..\Local\\Google\\Chrome\\User Data\\Default\\Cookies')) \
+                or glob.glob(os.path.join(os.getenv('LOCALAPPDATA', ''), 'Google\\Chrome\\User Data\\Default\\Cookies')) \
+                or glob.glob(os.path.join(os.getenv('APPDATA', ''), 'Google\\Chrome\\User Data\\Default\\Cookies'))
         else:
             raise BrowserCookieError("OS not recognized. Works on Chrome for OSX, Windows, and Linux.")
         self.tmp_cookie_file = create_local_copy(cookie_file)
@@ -221,12 +224,14 @@ class Firefox:
         elif sys.platform.startswith('linux'):
             cookie_files = glob.glob(os.path.expanduser('~/.mozilla/firefox/*.default/cookies.sqlite'))
         elif sys.platform == 'win32':
-            cookie_files = glob.glob(
-                os.path.join(os.environ.get('PROGRAMFILES', ''), 'Mozilla Firefox/profile/cookies.sqlite')) or \
-                           glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)', ''),
-                                                  'Mozilla Firefox/profile/cookies.sqlite')) or \
-                           glob.glob(os.path.join(os.environ.get('APPDATA', ''),
-                                                  'Mozilla/Firefox/Profiles/*.default*/cookies.sqlite'))
+            cookie_files = glob.glob(os.path.join(os.environ.get('PROGRAMFILES', ''), 
+                                                    'Mozilla Firefox/profile/cookies.sqlite')) \
+                            or glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)', ''),
+                                                    'Mozilla Firefox/profile/cookies.sqlite')) \
+                            or glob.glob(os.path.join(os.environ.get('APPDATA', ''),
+                                                    'Mozilla/Firefox/Profiles/*.default*/cookies.sqlite')) \
+                            or glob.glob(os.path.join(os.environ.get('LOCALAPPDATA', ''),
+                                                    'Mozilla/Firefox/Profiles/*.default*/cookies.sqlite'))
         else:
             raise BrowserCookieError('Unsupported operating system: ' + sys.platform)
         if cookie_files:
