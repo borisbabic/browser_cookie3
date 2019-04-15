@@ -37,7 +37,7 @@ def create_local_copy(cookie_file):
     to avoid sqlite locking errors.
     """
     # if type of cookie_file is a list, use the first element in the list
-    if type(cookie_file) == list:
+    if isinstance(cookie_file, list):
         cookie_file = cookie_file[0]
         
     # check if cookie file exists
