@@ -63,7 +63,25 @@ def windows_group_policy_path():
             return None
     except OSError:
         return None
-    return os.path.join(user_data_dir, "Default", "Cookies")
+    return chrome_active_cookie_file(user_data_dir)
+
+
+def chrome_active_cookie_file(user_data_dir):
+    found = glob.glob(os.path.join(user_data_dir, chrome_active_profile_name(user_data_dir), "Cookies"))
+    if found:
+        return found[0]
+    else:
+        return None
+
+
+def chrome_active_profile_name(user_data_dir):
+    try:
+        with open(os.path.join(user_data_dir, 'Local State'), 'rt', encoding='utf-8') as f:
+            state_json = json.load(f)
+            profile = state_json['profile']['last_used']
+    except (OSError, json.JSONDecodeError, KeyError):
+        profile = 'Default'
+    return profile
 
 
 # Code adapted slightly from https://github.com/Arnie97/chrome-cookies
@@ -114,7 +132,7 @@ class Chrome:
             iterations = 1003  # number of pbkdf2 iterations on mac
             self.key = PBKDF2(my_pass, self.salt, iterations=iterations).read(self.length)
             cookie_file = cookie_file \
-                or os.path.expanduser('~/Library/Application Support/Google/Chrome/Default/Cookies')
+                or chrome_active_cookie_file(os.path.expanduser('~/Library/Application Support/Google/Chrome'))
 
         elif sys.platform.startswith('linux'):
             # running Chrome on Linux
@@ -122,16 +140,16 @@ class Chrome:
             iterations = 1
             self.key = PBKDF2(my_pass, self.salt, iterations=iterations).read(self.length)
             cookie_file = cookie_file \
-                or os.path.expanduser('~/.config/google-chrome/Default/Cookies') \
-                or os.path.expanduser('~/.config/chromium/Default/Cookies') \
-                or os.path.expanduser('~/.config/google-chrome-beta/Default/Cookies')
+                or chrome_active_cookie_file(os.path.expanduser('~/.config/google-chrome')) \
+                or chrome_active_cookie_file(os.path.expanduser('~/.config/chromium')) \
+                or chrome_active_cookie_file(os.path.expanduser('~/.config/google-chrome-beta'))
         elif sys.platform == "win32":
             # get cookie file from APPDATA
             # Note: in windows the \\ is required before a u to stop unicode errors
             cookie_file = cookie_file or windows_group_policy_path() \
-                or glob.glob(os.path.join(os.getenv('APPDATA', ''), '..\Local\\Google\\Chrome\\User Data\\Default\\Cookies')) \
-                or glob.glob(os.path.join(os.getenv('LOCALAPPDATA', ''), 'Google\\Chrome\\User Data\\Default\\Cookies')) \
-                or glob.glob(os.path.join(os.getenv('APPDATA', ''), 'Google\\Chrome\\User Data\\Default\\Cookies'))
+                or chrome_active_cookie_file(os.path.join(os.getenv('APPDATA', ''), '..\Local\\Google\\Chrome\\User Data')) \
+                or chrome_active_cookie_file(os.path.join(os.getenv('LOCALAPPDATA', ''), 'Google\\Chrome\\User Data')) \
+                or chrome_active_cookie_file(os.path.join(os.getenv('APPDATA', ''), 'Google\\Chrome\\User Data'))
         else:
             raise BrowserCookieError("OS not recognized. Works on Chrome for OSX, Windows, and Linux.")
         self.tmp_cookie_file = create_local_copy(cookie_file)
