@@ -38,6 +38,8 @@ def create_local_copy(cookie_file):
     """
     # if type of cookie_file is a list, use the first element in the list
     if isinstance(cookie_file, list):
+        if not cookie_file:
+            raise BrowserCookieError('Failed to find Chrome cookie')
         cookie_file = cookie_file[0]
         
     # check if cookie file exists
