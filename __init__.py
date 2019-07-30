@@ -36,10 +36,6 @@ def create_local_copy(cookie_file):
     This is necessary in case this database is still being written to while the user browses
     to avoid sqlite locking errors.
     """
-    # if type of cookie_file is a list, use the first element in the list
-    if isinstance(cookie_file, list):
-        cookie_file = cookie_file[0]
-        
     # check if cookie file exists
     if os.path.exists(cookie_file):
         # copy to random name in tmp folder
@@ -134,6 +130,13 @@ class Chrome:
                 or glob.glob(os.path.join(os.getenv('APPDATA', ''), 'Google\\Chrome\\User Data\\Default\\Cookies'))
         else:
             raise BrowserCookieError("OS not recognized. Works on Chrome for OSX, Windows, and Linux.")
+
+        # if the type of cookie_file is list, use the first element in the list
+        if isinstance(cookie_file, list):
+            if not cookie_file:
+                raise BrowserCookieError('Failed to find Chrome cookie')
+            cookie_file = cookie_file[0]
+
         self.tmp_cookie_file = create_local_copy(cookie_file)
 
     def __del__(self):
