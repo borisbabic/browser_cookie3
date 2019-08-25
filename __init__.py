@@ -229,7 +229,7 @@ class Firefox:
             cookie_files = glob.glob(
                 os.path.expanduser('~/Library/Application Support/Firefox/Profiles/*default/cookies.sqlite'))
         elif sys.platform.startswith('linux'):
-            cookie_files = glob.glob(os.path.expanduser('~/.mozilla/firefox/*default/cookies.sqlite'))
+            cookie_files = glob.glob(os.path.expanduser('~/.mozilla/firefox/*default*/cookies.sqlite'))
         elif sys.platform == 'win32':
             cookie_files = glob.glob(os.path.join(os.environ.get('PROGRAMFILES', ''), 
                                                     'Mozilla Firefox/profile/cookies.sqlite')) \
