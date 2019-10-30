@@ -230,25 +230,24 @@ class Firefox:
     def __str__(self):
         return 'firefox'
 
-    @staticmethod
-    def find_cookie_file():
+    def find_cookie_file(self):
         if sys.platform == 'darwin':
+            profiles_ini_paths = glob.glob(os.path.expanduser('~/Library/Application Support/Firefox/profiles.ini'))
+            profiles_ini_path = self.get_default_profile(profiles_ini_paths)
             cookie_files = glob.glob(
-                os.path.expanduser('~/Library/Application Support/Firefox/Profiles/*default/cookies.sqlite'))
+                os.path.expanduser('~/Library/Application Support/Firefox/Profiles/*default/cookies.sqlite')) \
+                or os.path.expanduser('~/Library/Application Support/Firefox/Profiles/{0}/cookies.sqlite'.format(profiles_ini_path))
         elif sys.platform.startswith('linux'):
-            cookie_files = glob.glob(os.path.expanduser('~/.mozilla/firefox/*default*/cookies.sqlite'))
+            profiles_ini_paths = glob.glob(os.path.expanduser('~/.mozilla/firefox/profiles.ini'))
+            profiles_ini_path = self.get_default_profile(profiles_ini_paths)
+            cookie_files = glob.glob(os.path.expanduser('~/.mozilla/firefox/*default*/cookies.sqlite')) \
+                            or glob.glob(os.path.expanduser('~/.mozilla/firefox/{0}/cookies.sqlite'.format(profiles_ini_path)))
         elif sys.platform == 'win32':
-            profiles_ini_path = glob.glob(os.path.join(os.environ.get('APPDATA', ''),
+            profiles_ini_paths = glob.glob(os.path.join(os.environ.get('APPDATA', ''),
                                                     'Mozilla/Firefox/profiles.ini')) \
-                            or glob.glob(os.path.join(os.environ.get('LOCALAPPDATA', ''),
+                                    or glob.glob(os.path.join(os.environ.get('LOCALAPPDATA', ''),
                                                     'Mozilla/Firefox/profiles.ini'))
-            config = configparser.ConfigParser()
-            config.read(profiles_ini_path)
-            profile_path = "dummy"
-            for section in config.sections():
-                if re.match('Install.*', section) is not None:
-                    profile_path = config[section]['Default']
-
+            profiles_ini_path = self.get_default_profile(profiles_ini_paths)
             cookie_files = glob.glob(os.path.join(os.environ.get('PROGRAMFILES', ''), 
                                                     'Mozilla Firefox/profile/cookies.sqlite')) \
                             or glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)', ''),
@@ -258,7 +257,7 @@ class Firefox:
                             or glob.glob(os.path.join(os.environ.get('LOCALAPPDATA', ''),
                                                     'Mozilla/Firefox/Profiles/*default*/cookies.sqlite')) \
                             or glob.glob(os.path.join(os.environ.get('APPDATA', ''),
-                                                    "Mozilla/Firefox/{0}/cookies.sqlite".format(profile_path)))
+                                                    "Mozilla/Firefox/{0}/cookies.sqlite".format(profiles_ini_path)))
         else:
             raise BrowserCookieError('Unsupported operating system: ' + sys.platform)
         if cookie_files:
@@ -305,9 +304,22 @@ class Firefox:
 
         return cj
 
+    def get_default_profile(self, profiles_ini_path):
+        """ Given the path to firefox profiles.ini,
+            will return relative path to firefox default profile
+        """
+        config = configparser.ConfigParser()
+        config.read(profiles_ini_path)
+        profiles_path = "dummy"
+        for section in config.sections():
+            if re.match('Install.*', section) is not None:
+                profiles_path = config[section]['Default']
+        return profiles_path
+
     def mozlz4_to_text(self, filepath):
-        # Given the path to a "mozlz4", "jsonlz4", "baklz4" etc. file, 
-        # return the uncompressed text.
+        """Given the path to a "mozlz4", "jsonlz4", "baklz4" etc. file, 
+           return the uncompressed text.
+        """
         bytestream = open(filepath, "rb")
         if bytestream.read(8) != b"mozLz40\0":
             print('Error parsing firefox recovery JSONLZ4 - Invalid Header')
