@@ -7,6 +7,8 @@ import time
 import glob
 import http.cookiejar
 import tempfile
+import configparser
+import re
 
 try:
     import json
@@ -22,6 +24,10 @@ except ImportError:
 # external dependencies
 import keyring
 import pyaes
+try:
+    import lz4.block as lz4
+except ImportError:
+    import lz4
 from pbkdf2 import PBKDF2
 
 __doc__ = 'Load browser cookies into a cookiejar'
@@ -212,6 +218,7 @@ class Firefox:
         self.tmp_cookie_file = create_local_copy(cookie_file)
         # current sessions are saved in sessionstore.js
         self.session_file = os.path.join(os.path.dirname(cookie_file), 'sessionstore.js')
+        self.recovery_file = os.path.join(os.path.dirname(cookie_file), 'sessionstore-backups/recovery.jsonlz4')
         # domain name to filter cookies by
         self.domain_name = domain_name
 
@@ -231,6 +238,17 @@ class Firefox:
         elif sys.platform.startswith('linux'):
             cookie_files = glob.glob(os.path.expanduser('~/.mozilla/firefox/*default*/cookies.sqlite'))
         elif sys.platform == 'win32':
+            profiles_ini_path = glob.glob(os.path.join(os.environ.get('APPDATA', ''),
+                                                    'Mozilla/Firefox/profiles.ini')) \
+                            or glob.glob(os.path.join(os.environ.get('LOCALAPPDATA', ''),
+                                                    'Mozilla/Firefox/profiles.ini'))
+            config = configparser.ConfigParser()
+            config.read(profiles_ini_path)
+            profile_path = "dummy"
+            for section in config.sections():
+                if re.match('Install.*', section) is not None:
+                    profile_path = config[section]['Default']
+
             cookie_files = glob.glob(os.path.join(os.environ.get('PROGRAMFILES', ''), 
                                                     'Mozilla Firefox/profile/cookies.sqlite')) \
                             or glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)', ''),
@@ -238,7 +256,9 @@ class Firefox:
                             or glob.glob(os.path.join(os.environ.get('APPDATA', ''),
                                                     'Mozilla/Firefox/Profiles/*default*/cookies.sqlite')) \
                             or glob.glob(os.path.join(os.environ.get('LOCALAPPDATA', ''),
-                                                    'Mozilla/Firefox/Profiles/*default*/cookies.sqlite'))
+                                                    'Mozilla/Firefox/Profiles/*default*/cookies.sqlite')) \
+                            or glob.glob(os.path.join(os.environ.get('APPDATA', ''),
+                                                    "Mozilla/Firefox/{0}/cookies.sqlite".format(profile_path)))
         else:
             raise BrowserCookieError('Unsupported operating system: ' + sys.platform)
         if cookie_files:
@@ -271,7 +291,30 @@ class Firefox:
                                           cookie.get('name', ''), cookie.get('value', ''))
                         cj.set_cookie(c)
 
+        if os.path.exists(self.recovery_file):
+            try:
+                json_data = json.loads(self.mozlz4_to_text(self.recovery_file).decode("utf-8"))
+            except ValueError as e:
+                print('Error parsing firefox recovery JSONLZ4:', str(e))
+            else:
+                expires = str(int(time.time()) + 3600 * 24 * 7)
+                for cookie in json_data.get('cookies', []):
+                    c = create_cookie(cookie.get('host', ''), cookie.get('path', ''), False, expires,
+                                      cookie.get('name', ''), cookie.get('value', ''))
+                    cj.set_cookie(c)
+
         return cj
+
+    def mozlz4_to_text(self, filepath):
+        # Given the path to a "mozlz4", "jsonlz4", "baklz4" etc. file, 
+        # return the uncompressed text.
+        bytestream = open(filepath, "rb")
+        if bytestream.read(8) != b"mozLz40\0":
+            print('Error parsing firefox recovery JSONLZ4 - Invalid Header')
+            return None
+        else:
+            valid_bytes = bytestream.read()
+            return lz4.decompress(valid_bytes)
 
 
 def create_cookie(host, path, secure, expires, name, value):
