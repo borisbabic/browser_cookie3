@@ -286,9 +286,10 @@ class Firefox:
                 expires = str(int(time.time()) + 3600 * 24 * 7)
                 for window in json_data.get('windows', []):
                     for cookie in window.get('cookies', []):
-                        c = create_cookie(cookie.get('host', ''), cookie.get('path', ''), False, expires,
-                                          cookie.get('name', ''), cookie.get('value', ''))
-                        cj.set_cookie(c)
+                        if cookie.get('host') == self.domain_name:
+                            c = create_cookie(cookie.get('host', ''), cookie.get('path', ''), False, expires,
+                                            cookie.get('name', ''), cookie.get('value', ''))
+                            cj.set_cookie(c)
 
         if os.path.exists(self.recovery_file):
             try:
@@ -298,9 +299,10 @@ class Firefox:
             else:
                 expires = str(int(time.time()) + 3600 * 24 * 7)
                 for cookie in json_data.get('cookies', []):
-                    c = create_cookie(cookie.get('host', ''), cookie.get('path', ''), False, expires,
-                                      cookie.get('name', ''), cookie.get('value', ''))
-                    cj.set_cookie(c)
+                    if cookie.get('host') == self.domain_name:
+                        c = create_cookie(cookie.get('host', ''), cookie.get('path', ''), False, expires,
+                                        cookie.get('name', ''), cookie.get('value', ''))
+                        cj.set_cookie(c)
 
         return cj
 
