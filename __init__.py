@@ -9,6 +9,7 @@ import http.cookiejar
 import tempfile
 import configparser
 import re
+import datetime
 
 try:
     import json
@@ -168,8 +169,13 @@ class Chrome:
                         'FROM cookies WHERE host_key like "%{}%";'.format(self.domain_name))
 
         cj = http.cookiejar.CookieJar()
+        epoch_start = datetime.datetime(1601,1,1)
         for item in cur.fetchall():
             host, path, secure, expires, name = item[:5]
+            if item[3] != 0:
+                delta = datetime.timedelta(microseconds=int(item[3]))
+                expires = epoch_start + delta
+                expires = expires.timestamp()
             value = self._decrypt(item[5], item[6])
             c = create_cookie(host, path, secure, expires, name, value)
             cj.set_cookie(c)
