@@ -7,7 +7,6 @@ import time
 import glob
 import http.cookiejar
 import tempfile
-import configparser
 import re
 import datetime
 
@@ -23,6 +22,7 @@ except ImportError:
     import sqlite3
 
 # external dependencies
+import configparser
 import keyring
 import pyaes
 try:
