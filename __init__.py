@@ -7,6 +7,7 @@ import time
 import glob
 import http.cookiejar
 import tempfile
+import lz4.block
 
 try:
     import json
@@ -212,6 +213,7 @@ class Firefox:
         self.tmp_cookie_file = create_local_copy(cookie_file)
         # current sessions are saved in sessionstore.js
         self.session_file = os.path.join(os.path.dirname(cookie_file), 'sessionstore.js')
+        self.session_file_lz4 = os.path.join(os.path.dirname(cookie_file), 'sessionstore-backups', 'recovery.jsonlz4')
         # domain name to filter cookies by
         self.domain_name = domain_name
 
@@ -246,6 +248,37 @@ class Firefox:
         else:
             raise BrowserCookieError('Failed to find Firefox cookie')
 
+    @staticmethod
+    def __create_session_cookie(cookie_json):
+        expires = str(int(time.time()) + 3600 * 24 * 7)
+        return create_cookie(cookie_json.get('host', ''), cookie_json.get('path', ''), False, expires,
+                             cookie_json.get('name', ''), cookie_json.get('value', ''))
+
+    def __add_session_cookies(self, cj):
+        if not os.path.exists(self.session_file):
+            return
+        try:
+            json_data = json.loads(open(self.session_file, 'rb').read().decode())
+        except ValueError as e:
+            print('Error parsing firefox session JSON:', str(e))
+        else:
+            for window in json_data.get('windows', []):
+                for cookie in window.get('cookies', []):
+                    cj.set_cookie(Firefox.__create_session_cookie(cookie))
+
+    def __add_session_cookies_lz4(self, cj):
+        if not os.path.exists(self.session_file_lz4):
+            return
+        try:
+            file_obj = open(self.session_file_lz4, 'rb')
+            file_obj.read(8)
+            json_data = json.loads(lz4.block.decompress(file_obj.read()))
+        except ValueError as e:
+            print('Error parsing firefox session JSON LZ4:', str(e))
+        else:
+            for cookie in json_data.get('cookies', []):
+                cj.set_cookie(Firefox.__create_session_cookie(cookie))
+
     def load(self):
         con = sqlite3.connect(self.tmp_cookie_file)
         cur = con.cursor()
@@ -258,18 +291,8 @@ class Firefox:
             cj.set_cookie(c)
         con.close()
 
-        if os.path.exists(self.session_file):
-            try:
-                json_data = json.loads(open(self.session_file, 'rb').read().decode())
-            except ValueError as e:
-                print('Error parsing firefox session JSON:', str(e))
-            else:
-                expires = str(int(time.time()) + 3600 * 24 * 7)
-                for window in json_data.get('windows', []):
-                    for cookie in window.get('cookies', []):
-                        c = create_cookie(cookie.get('host', ''), cookie.get('path', ''), False, expires,
-                                          cookie.get('name', ''), cookie.get('value', ''))
-                        cj.set_cookie(c)
+        self.__add_session_cookies(cj)
+        self.__add_session_cookies_lz4(cj)
 
         return cj
 
