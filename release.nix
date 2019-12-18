@@ -9,4 +9,4 @@
 #   twine upload dist/project_name-x.y.z.tar.gz
 with import <nixpkgs> {};
 
-(pkgs.python36.withPackages (ps: with ps; [twine setuptools])).env
+(pkgs.python3.withPackages (ps: with ps; [twine setuptools])).env
