@@ -8,6 +8,7 @@ import glob
 import http.cookiejar
 import tempfile
 import lz4.block
+import configparser
 
 try:
     import json
@@ -45,6 +46,10 @@ def create_local_copy(cookie_file):
         return tmp_cookie_file
     else:
         raise BrowserCookieError('Can not find cookie file at: ' + cookie_file)
+
+
+def to_glob_pattern(*env_vars):
+    return '{' + ','.join(map(os.environ.get, env_vars)) + '}'
 
 
 def windows_group_policy_path():
@@ -227,26 +232,37 @@ class Firefox:
 
     @staticmethod
     def find_cookie_file():
+        cookie_files = []
+
         if sys.platform == 'darwin':
-            cookie_files = glob.glob(
-                os.path.expanduser('~/Library/Application Support/Firefox/Profiles/*default/cookies.sqlite'))
+            profiles_prefix = os.path.expanduser('~/Library/Application Support/Firefox/Profiles')
         elif sys.platform.startswith('linux'):
-            cookie_files = glob.glob(os.path.expanduser('~/.mozilla/firefox/*default*/cookies.sqlite'))
+            profiles_prefix = os.path.expanduser('~/.mozilla/firefox/')
         elif sys.platform == 'win32':
-            cookie_files = glob.glob(os.path.join(os.environ.get('PROGRAMFILES', ''), 
-                                                    'Mozilla Firefox/profile/cookies.sqlite')) \
-                            or glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)', ''),
-                                                    'Mozilla Firefox/profile/cookies.sqlite')) \
-                            or glob.glob(os.path.join(os.environ.get('APPDATA', ''),
-                                                    'Mozilla/Firefox/Profiles/*default*/cookies.sqlite')) \
-                            or glob.glob(os.path.join(os.environ.get('LOCALAPPDATA', ''),
-                                                    'Mozilla/Firefox/Profiles/*default*/cookies.sqlite'))
+            app_data_path = to_glob_pattern('APPDATA', 'LOCALAPPDATA')
+            profiles_prefix = os.path.join(app_data_path, 'Mozilla/Firefox/Profiles')
+            # legacy firefox <68 fallback
+            program_files_path = to_glob_pattern('PROGRAMFILES', 'PROGRAMFILES(X86)')
+            cookie_files = glob.glob(os.path.join(program_files_path, 'Mozilla Firefox/profile/cookies.sqlite'))
         else:
             raise BrowserCookieError('Unsupported operating system: ' + sys.platform)
+
+        profile_name = Firefox.__get_profile_name(profiles_prefix)
+        cookie_files = glob.glob(os.path.join(profiles_prefix, profile_name, 'cookies.sqlite')) or cookie_files
+
         if cookie_files:
             return cookie_files[0]
         else:
             raise BrowserCookieError('Failed to find Firefox cookie')
+
+    @staticmethod
+    def __get_profile_name(profiles_prefix):
+        config = configparser.ConfigParser()
+        config.read(os.path.join(profiles_prefix, 'profiles.ini'))
+        for section in config.sections():
+            if section.startswith('Install'):
+                return config[section]['Default']
+        return 'none'
 
     @staticmethod
     def __create_session_cookie(cookie_json):
