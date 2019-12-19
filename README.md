@@ -93,6 +93,9 @@ Run `google-chrome-stable --user-data-dir=browser_cookie3 #replace google-chrome
 
 If you want to share a cookie file then visit some site that will generate cookie (without logging in!), example https://www.theverge.com/ will save cookies after you accept the GDPR notice.
 
+## Planned backwards incompatible changes for 1.0
+- more sensible cookie file checking order, like first using the default defined in profiles.ini for firefox
+
 ## Contribute ##
 So far the following platforms are supported:
 
