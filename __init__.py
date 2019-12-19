@@ -237,6 +237,16 @@ class Firefox:
         return 'firefox'
 
     @staticmethod
+    def get_default_profile(profiles_prefix, absolute=False):
+        is_relative = '0' if absolute else '1'
+        config = configparser.ConfigParser()
+        config.read(os.path.join(profiles_prefix, 'profiles.ini'))
+        for section in config.sections():
+            if config[section].get('Default') == '1' and config[section].get('IsRelative') == is_relative:
+                return config[section].get('Path')
+        return None
+
+    @staticmethod
     def find_cookie_file():
         cookie_files = []
 
@@ -253,22 +263,15 @@ class Firefox:
         else:
             raise BrowserCookieError('Unsupported operating system: ' + sys.platform)
 
-        profile_name = Firefox.__get_profile_name(profiles_prefix)
-        cookie_files = glob.glob(os.path.join(profiles_prefix, profile_name, 'cookies.sqlite')) or cookie_files
+        profile_name = Firefox.get_default_profile(profiles_prefix)
+        cookie_files = glob.glob(os.path.join(profiles_prefix, profile_name, 'cookies.sqlite')) \
+            or glob.glob(Firefox.get_default_profile(profiles_prefix, True)) \
+            or cookie_files
 
         if cookie_files:
             return cookie_files[0]
         else:
             raise BrowserCookieError('Failed to find Firefox cookie')
-
-    @staticmethod
-    def __get_profile_name(profiles_prefix):
-        config = configparser.ConfigParser()
-        config.read(os.path.join(profiles_prefix, 'profiles.ini'))
-        for section in config.sections():
-            if section.startswith('Install'):
-                return config[section]['Default']
-        return 'none'
 
     @staticmethod
     def __create_session_cookie(cookie_json):
