@@ -167,14 +167,17 @@ class Chrome:
         cj = http.cookiejar.CookieJar()
         epoch_start = datetime.datetime(1601,1,1)
         for item in cur.fetchall():
-            host, path, secure, expires, name = item[:5]
-            if item[3] != 0:
-                delta = datetime.timedelta(microseconds=int(item[3]))
-                expires = epoch_start + delta
-                expires = expires.timestamp()
-            value = self._decrypt(item[5], item[6])
-            c = create_cookie(host, path, secure, expires, name, value)
-            cj.set_cookie(c)
+            try:
+                host, path, secure, expires, name = item[:5]
+                if item[3] != 0:
+                    delta = datetime.timedelta(microseconds=int(item[3]))
+                    expires = epoch_start + delta
+                    expires = expires.timestamp()
+                value = self._decrypt(item[5], item[6])
+                c = create_cookie(host, path, secure, expires, name, value)
+                cj.set_cookie(c)
+            except (OverflowError, OSError):
+                continue
         con.close()
         return cj
 
