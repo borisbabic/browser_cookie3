@@ -169,7 +169,9 @@ class Chrome:
         for item in cur.fetchall():
             host, path, secure, expires, name = item[:5]
             if item[3] != 0:
-                delta = datetime.timedelta(microseconds=int(item[3]))
+                # ensure dates don't exceed the datetime limit of year 10000
+                offset = min(int(item[3]), 265000000000000000)
+                delta = datetime.timedelta(microseconds=offset)
                 expires = epoch_start + delta
                 expires = expires.timestamp()
             value = self._decrypt(item[5], item[6])
