@@ -252,7 +252,7 @@ class Firefox:
     def find_cookie_file(self):
         if sys.platform == 'darwin':
             profiles_ini_paths = glob.glob(os.path.expanduser('~/Library/Application Support/Firefox/profiles.ini'))
-            profiles_ini_path = self.get_default_profile(profiles_ini_paths, os.path.expanduser('~/Library/Application Support/Firefox/Profiles/{0}/cookies.sqlite'.format(profiles_ini_path)))
+            profiles_ini_path = self.get_default_profile(profiles_ini_paths, os.path.expanduser('~/Library/Application Support/Firefox/{0}/cookies.sqlite'))
             cookie_files = glob.glob(
                 os.path.expanduser('~/Library/Application Support/Firefox/Profiles/*default/cookies.sqlite')) \
                 or glob.glob(profiles_ini_path)
