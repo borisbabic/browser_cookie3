@@ -247,7 +247,7 @@ class Firefox:
                     return template_for_relative.format(config[section]['Path'])
             except KeyError:
                 continue
-        return none
+        return None
 
     def find_cookie_file(self):
         if sys.platform == 'darwin':
