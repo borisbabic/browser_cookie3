@@ -265,7 +265,7 @@ class Firefox:
 
         profile_name = Firefox.get_default_profile(profiles_prefix)
         cookie_files = glob.glob(os.path.join(profiles_prefix, profile_name or '*', 'cookies.sqlite')) \
-            or glob.glob(Firefox.get_default_profile(profiles_prefix, True)) \
+            or glob.glob(Firefox.get_default_profile(profiles_prefix, True) or '') \
             or cookie_files
 
         if cookie_files:
