@@ -264,7 +264,7 @@ class Firefox:
             raise BrowserCookieError('Unsupported operating system: ' + sys.platform)
 
         profile_name = Firefox.get_default_profile(profiles_prefix)
-        cookie_files = glob.glob(os.path.join(profiles_prefix, profile_name, 'cookies.sqlite')) \
+        cookie_files = glob.glob(os.path.join(profiles_prefix, profile_name or '*', 'cookies.sqlite')) \
             or glob.glob(Firefox.get_default_profile(profiles_prefix, True)) \
             or cookie_files
 
