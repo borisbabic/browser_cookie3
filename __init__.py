@@ -256,10 +256,10 @@ class Firefox:
             profiles_prefix = os.path.expanduser('~/.mozilla/firefox/')
         elif sys.platform == 'win32':
             app_data_path = to_glob_pattern('APPDATA', 'LOCALAPPDATA')
-            profiles_prefix = os.path.join(app_data_path, 'Mozilla/Firefox/Profiles')
+            profiles_prefix = os.path.join(app_data_path, 'Mozilla', 'Firefox', 'Profiles')
             # legacy firefox <68 fallback
             program_files_path = to_glob_pattern('PROGRAMFILES', 'PROGRAMFILES(X86)')
-            cookie_files = glob.glob(os.path.join(program_files_path, 'Mozilla Firefox/profile/cookies.sqlite'))
+            cookie_files = glob.glob(os.path.join(program_files_path, 'Mozilla Firefox', 'profile', 'cookies.sqlite'))
         else:
             raise BrowserCookieError('Unsupported operating system: ' + sys.platform)
 
