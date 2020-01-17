@@ -236,12 +236,18 @@ class Firefox:
     def get_default_profile(user_data_path):
         config = configparser.ConfigParser()
         profiles_ini_path = glob.glob(os.path.join(user_data_path + '**', 'profiles.ini'))
+        fallback_path = user_data_path + '**'
+
+        if not profiles_ini_path:
+            return fallback_path
+
+        profiles_ini_path = profiles_ini_path[0]
         config.read(profiles_ini_path)
 
         profile_path = None
         for section in config.sections():
             if section.startswith('Install'):
-                profile_path = config[section].get('Path')
+                profile_path = config[section].get('Default')
                 break
             # in ff 72.0.1, if both an Install section and one with Default=1 are present, the former takes precedence
             elif config[section].get('Default') == '1' and not profile_path:
@@ -253,8 +259,7 @@ class Firefox:
                 absolute = config[section].get('IsRelative') == '0'
                 return profile_path if absolute else os.path.join(os.path.dirname(profiles_ini_path), profile_path)
 
-        # just try to find any user data subdirectory that matches in case there's no profiles.ini
-        return user_data_path + '**'
+        return fallback_path
 
     @staticmethod
     def find_cookie_file():
@@ -265,7 +270,7 @@ class Firefox:
         elif sys.platform.startswith('linux'):
             user_data_path = os.path.expanduser('~/.mozilla/firefox')
         elif sys.platform == 'win32':
-            user_data_path = glob.glob(os.path.join(os.environ.get('APPDATA'), 'Mozilla', 'Firefox'))
+            user_data_path = os.path.join(os.environ.get('APPDATA'), 'Mozilla', 'Firefox')
             # legacy firefox <68 fallback
             cookie_files = glob.glob(os.path.join(os.environ.get('PROGRAMFILES'), 'Mozilla Firefox', 'profile', 'cookies.sqlite')) \
                 or glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)'), 'Mozilla Firefox', 'profile', 'cookies.sqlite'))
