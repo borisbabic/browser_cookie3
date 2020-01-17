@@ -251,9 +251,8 @@ class Firefox:
         elif sys.platform.startswith('linux'):
             profiles_prefix = os.path.expanduser('~/.mozilla/firefox/')
         elif sys.platform == 'win32':
-            app_data_paths = list(map(os.environ.get, ['APPDATA', 'LOCALAPPDATA']))
-            profiles_prefix = glob.glob(os.path.join(app_data_paths[0], 'Mozilla', 'Firefox', 'Profiles')) \
-                or glob.glob(os.path.join(app_data_paths[1], 'Mozilla', 'Firefox', 'Profiles'))
+            profiles_prefix = glob.glob(os.path.join(os.environ.get('APPDATA'), 'Mozilla', 'Firefox', 'Profiles')) \
+                or glob.glob(os.path.join(os.environ.get('LOCALAPPDATA'), 'Mozilla', 'Firefox', 'Profiles'))
             # legacy firefox <68 fallback
             programs_paths = list(map(os.environ.get, ['PROGRAMFILES', 'PROGRAMFILES(X86)']))
             cookie_files = glob.glob(os.path.join(programs_paths[0], 'Mozilla Firefox', 'profile', 'cookies.sqlite')) \
