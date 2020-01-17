@@ -233,36 +233,36 @@ class Firefox:
         return 'firefox'
 
     @staticmethod
-    def get_default_profile(profiles_prefix, absolute=False):
-        is_relative = '0' if absolute else '1'
+    def get_default_profile(user_data_path):
         config = configparser.ConfigParser()
-        config.read(os.path.join(profiles_prefix, 'profiles.ini'))
+        profiles_ini_path = glob.glob(os.path.join(user_data_path + '**', 'profiles.ini'))
+        config.read(profiles_ini_path)
         for section in config.sections():
-            if config[section].get('Default') == '1' and config[section].get('IsRelative') == is_relative:
-                return config[section].get('Path')
-        return None
+            if config[section].get('Default') == '1':
+                profile_path = config[section].get('Path')
+                absolute = config[section].get('IsRelative') == '0'
+                return profile_path if absolute else os.path.join(os.path.dirname(profiles_ini_path), profile_path)
+        # just try to find any user data subdirectory that matches in case there's no profiles.ini
+        return user_data_path + '**'
 
     @staticmethod
     def find_cookie_file():
         cookie_files = []
 
         if sys.platform == 'darwin':
-            profiles_prefix = os.path.expanduser('~/Library/Application Support/Firefox/Profiles')
+            user_data_path = os.path.expanduser('~/Library/Application Support/Firefox')
         elif sys.platform.startswith('linux'):
-            profiles_prefix = os.path.expanduser('~/.mozilla/firefox/')
+            user_data_path = os.path.expanduser('~/.mozilla/firefox')
         elif sys.platform == 'win32':
-            profiles_prefix = glob.glob(os.path.join(os.environ.get('APPDATA'), 'Mozilla', 'Firefox', 'Profiles')) \
-                or glob.glob(os.path.join(os.environ.get('LOCALAPPDATA'), 'Mozilla', 'Firefox', 'Profiles'))
+            user_data_path = glob.glob(os.path.join(os.environ.get('APPDATA'), 'Mozilla', 'Firefox')) \
+                or glob.glob(os.path.join(os.environ.get('LOCALAPPDATA'), 'Mozilla', 'Firefox'))
             # legacy firefox <68 fallback
-            programs_paths = list(map(os.environ.get, ['PROGRAMFILES', 'PROGRAMFILES(X86)']))
-            cookie_files = glob.glob(os.path.join(programs_paths[0], 'Mozilla Firefox', 'profile', 'cookies.sqlite')) \
-                or glob.glob(os.path.join(programs_paths[1], 'Mozilla Firefox', 'profile', 'cookies.sqlite'))
+            cookie_files = glob.glob(os.path.join(os.environ.get('PROGRAMFILES'), 'Mozilla Firefox', 'profile', 'cookies.sqlite')) \
+                or glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)'), 'Mozilla Firefox', 'profile', 'cookies.sqlite'))
         else:
             raise BrowserCookieError('Unsupported operating system: ' + sys.platform)
 
-        profile_name = Firefox.get_default_profile(profiles_prefix)
-        cookie_files = glob.glob(os.path.join(profiles_prefix, profile_name or '*', 'cookies.sqlite')) \
-            or glob.glob(Firefox.get_default_profile(profiles_prefix, True) or '') \
+        cookie_files = glob.glob(os.path.join(Firefox.get_default_profile(user_data_path), 'cookies.sqlite')) \
             or cookie_files
 
         if cookie_files:
