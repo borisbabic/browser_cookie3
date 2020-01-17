@@ -254,8 +254,7 @@ class Firefox:
         elif sys.platform.startswith('linux'):
             user_data_path = os.path.expanduser('~/.mozilla/firefox')
         elif sys.platform == 'win32':
-            user_data_path = glob.glob(os.path.join(os.environ.get('APPDATA'), 'Mozilla', 'Firefox')) \
-                or glob.glob(os.path.join(os.environ.get('LOCALAPPDATA'), 'Mozilla', 'Firefox'))
+            user_data_path = glob.glob(os.path.join(os.environ.get('APPDATA'), 'Mozilla', 'Firefox'))
             # legacy firefox <68 fallback
             cookie_files = glob.glob(os.path.join(os.environ.get('PROGRAMFILES'), 'Mozilla Firefox', 'profile', 'cookies.sqlite')) \
                 or glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)'), 'Mozilla Firefox', 'profile', 'cookies.sqlite'))
