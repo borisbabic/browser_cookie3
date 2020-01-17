@@ -49,10 +49,6 @@ def create_local_copy(cookie_file):
         raise BrowserCookieError('Can not find cookie file at: ' + cookie_file)
 
 
-def to_glob_pattern(*env_vars):
-    return '{' + ','.join(map(os.environ.get, env_vars)) + '}'
-
-
 def windows_group_policy_path():
     # we know that we're running under windows at this point so it's safe to do these imports
     from winreg import ConnectRegistry, HKEY_LOCAL_MACHINE, OpenKeyEx, QueryValueEx, REG_EXPAND_SZ, REG_SZ
@@ -255,11 +251,13 @@ class Firefox:
         elif sys.platform.startswith('linux'):
             profiles_prefix = os.path.expanduser('~/.mozilla/firefox/')
         elif sys.platform == 'win32':
-            app_data_path = to_glob_pattern('APPDATA', 'LOCALAPPDATA')
-            profiles_prefix = os.path.join(app_data_path, 'Mozilla', 'Firefox', 'Profiles')
+            app_data_paths = list(map(os.environ.get, ['APPDATA', 'LOCALAPPDATA']))
+            profiles_prefix = glob.glob(os.path.join(app_data_paths[0], 'Mozilla', 'Firefox', 'Profiles')) \
+                or glob.glob(os.path.join(app_data_paths[1], 'Mozilla', 'Firefox', 'Profiles'))
             # legacy firefox <68 fallback
-            program_files_path = to_glob_pattern('PROGRAMFILES', 'PROGRAMFILES(X86)')
-            cookie_files = glob.glob(os.path.join(program_files_path, 'Mozilla Firefox', 'profile', 'cookies.sqlite'))
+            programs_paths = list(map(os.environ.get, ['PROGRAMFILES', 'PROGRAMFILES(X86)']))
+            cookie_files = glob.glob(os.path.join(programs_paths[0], 'Mozilla Firefox', 'profile', 'cookies.sqlite')) \
+                or glob.glob(os.path.join(programs_paths[1], 'Mozilla Firefox', 'profile', 'cookies.sqlite'))
         else:
             raise BrowserCookieError('Unsupported operating system: ' + sys.platform)
 
