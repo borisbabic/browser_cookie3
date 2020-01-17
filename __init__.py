@@ -237,11 +237,22 @@ class Firefox:
         config = configparser.ConfigParser()
         profiles_ini_path = glob.glob(os.path.join(user_data_path + '**', 'profiles.ini'))
         config.read(profiles_ini_path)
+
+        profile_path = None
         for section in config.sections():
-            if config[section].get('Default') == '1':
+            if config[section].startswith('Install'):
                 profile_path = config[section].get('Path')
+                break
+            # in ff 72.0.1, if both an Install section and one with Default=1 are present, the former takes precedence
+            elif config[section].get('Default') == '1' and not profile_path:
+                profile_path = config[section].get('Path')
+
+        for section in config.sections():
+            # the Install section has no relative/absolute info, so check the profiles
+            if config[section].get('Path') == profile_path:
                 absolute = config[section].get('IsRelative') == '0'
                 return profile_path if absolute else os.path.join(os.path.dirname(profiles_ini_path), profile_path)
+
         # just try to find any user data subdirectory that matches in case there's no profiles.ini
         return user_data_path + '**'
 
