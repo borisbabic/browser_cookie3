@@ -234,51 +234,54 @@ class Firefox:
     def __str__(self):
         return 'firefox'
 
-
-    def get_default_profile(self, profiles_ini_path, template_for_relative):
-        """ Given the path to firefox profiles.ini,
-            will return relative path to firefox default profile
-        """
+    @staticmethod
+    def get_default_profile(user_data_path):
         config = configparser.ConfigParser()
-        config.read(profiles_ini_path)
-        for section in config.sections():
-            try:
-                if config[section]['Default'] == '1' and config[section]['IsRelative'] == '1':
-                    return template_for_relative.format(config[section]['Path'])
-            except KeyError:
-                continue
-        return None
+        profiles_ini_path = glob.glob(os.path.join(user_data_path + '**', 'profiles.ini'))
+        fallback_path = user_data_path + '**'
 
-    def find_cookie_file(self):
+        if not profiles_ini_path:
+            return fallback_path
+
+        profiles_ini_path = profiles_ini_path[0]
+        config.read(profiles_ini_path)
+
+        profile_path = None
+        for section in config.sections():
+            if section.startswith('Install'):
+                profile_path = config[section].get('Default')
+                break
+            # in ff 72.0.1, if both an Install section and one with Default=1 are present, the former takes precedence
+            elif config[section].get('Default') == '1' and not profile_path:
+                profile_path = config[section].get('Path')
+
+        for section in config.sections():
+            # the Install section has no relative/absolute info, so check the profiles
+            if config[section].get('Path') == profile_path:
+                absolute = config[section].get('IsRelative') == '0'
+                return profile_path if absolute else os.path.join(os.path.dirname(profiles_ini_path), profile_path)
+
+        return fallback_path
+
+    @staticmethod
+    def find_cookie_file():
+        cookie_files = []
+
         if sys.platform == 'darwin':
-            profiles_ini_paths = glob.glob(os.path.expanduser('~/Library/Application Support/Firefox/profiles.ini'))
-            profiles_ini_path = self.get_default_profile(profiles_ini_paths, os.path.expanduser('~/Library/Application Support/Firefox/Profiles/{0}/cookies.sqlite'.format(profiles_ini_path)))
-            cookie_files = glob.glob(
-                os.path.expanduser('~/Library/Application Support/Firefox/Profiles/*default/cookies.sqlite')) \
-                or glob.glob(profiles_ini_path)
+            user_data_path = os.path.expanduser('~/Library/Application Support/Firefox')
         elif sys.platform.startswith('linux'):
-            profiles_ini_paths = glob.glob(os.path.expanduser('~/.mozilla/firefox/profiles.ini'))
-            profiles_ini_path = self.get_default_profile(profiles_ini_paths, os.path.expanduser('~/.mozilla/firefox/{0}/cookies.sqlite'))
-            cookie_files = glob.glob(os.path.expanduser('~/.mozilla/firefox/*default*/cookies.sqlite')) \
-            or glob.glob(profiles_ini_path)
+            user_data_path = os.path.expanduser('~/.mozilla/firefox')
         elif sys.platform == 'win32':
-            profiles_ini_paths = glob.glob(os.path.join(os.environ.get('APPDATA', ''),
-                                                    'Mozilla/Firefox/profiles.ini')) \
-                                    or glob.glob(os.path.join(os.environ.get('LOCALAPPDATA', ''),
-                                                    'Mozilla/Firefox/profiles.ini'))
-            profiles_ini_path = self.get_default_profile(profiles_ini_paths, os.path.join(os.environ.get('APPDATA', ''),
-                                                    "Mozilla/Firefox/{0}/cookies.sqlite"))
-            cookie_files = glob.glob(os.path.join(os.environ.get('PROGRAMFILES', ''), 
-                                                    'Mozilla Firefox/profile/cookies.sqlite')) \
-                            or glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)', ''),
-                                                    'Mozilla Firefox/profile/cookies.sqlite')) \
-                            or glob.glob(os.path.join(os.environ.get('APPDATA', ''),
-                                                    'Mozilla/Firefox/Profiles/*default*/cookies.sqlite')) \
-                            or glob.glob(os.path.join(os.environ.get('LOCALAPPDATA', ''),
-                                                    'Mozilla/Firefox/Profiles/*default*/cookies.sqlite')) \
-                            or glob.glob(profiles_ini_path)
+            user_data_path = os.path.join(os.environ.get('APPDATA'), 'Mozilla', 'Firefox')
+            # legacy firefox <68 fallback
+            cookie_files = glob.glob(os.path.join(os.environ.get('PROGRAMFILES'), 'Mozilla Firefox', 'profile', 'cookies.sqlite')) \
+                or glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)'), 'Mozilla Firefox', 'profile', 'cookies.sqlite'))
         else:
             raise BrowserCookieError('Unsupported operating system: ' + sys.platform)
+
+        cookie_files = glob.glob(os.path.join(Firefox.get_default_profile(user_data_path), 'cookies.sqlite')) \
+            or cookie_files
+
         if cookie_files:
             return cookie_files[0]
         else:

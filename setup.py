@@ -9,6 +9,6 @@ setup(
     author_email='boris.ivan.babic@gmail.com',
     description='Loads cookies from your browser into a cookiejar object so can download with urllib and other libraries the same content you see in the web browser.',
     url='https://github.com/borisbabic/browser_cookie3',
-    install_requires=['pyaes','pbkdf2','keyring','lz4', 'configparser'],
+    install_requires=['pyaes','pbkdf2','keyring','lz4'],
     license='lgpl'
 )
