@@ -2,10 +2,9 @@ from distutils.core import setup
 
 setup(
     name='browser-cookie3',
-    version='0.9.1',
+    version='0.9.0',
     packages=['browser_cookie3'],
     package_dir={'browser_cookie3' : '.'}, # look for package contents in current directory
-    zip_safe=False,
     author='Boris Babic',
     author_email='boris.ivan.babic@gmail.com',
     description='Loads cookies from your browser into a cookiejar object so can download with urllib and other libraries the same content you see in the web browser.',
