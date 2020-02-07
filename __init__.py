@@ -120,10 +120,12 @@ class Chrome:
             my_pass = 'peanuts'.encode('utf8')  # chrome linux is encrypted with the key peanuts
             iterations = 1
             self.key = PBKDF2(my_pass, self.salt, iterations=iterations).read(self.length)
-            cookie_file = cookie_file \
-                or os.path.expanduser('~/.config/google-chrome/Default/Cookies') \
-                or os.path.expanduser('~/.config/chromium/Default/Cookies') \
-                or os.path.expanduser('~/.config/google-chrome-beta/Default/Cookies')
+            paths = map(os.path.expanduser, [
+                '~/.config/google-chrome/Default/Cookies',
+                '~/.config/chromium/Default/Cookies',
+                '~/.config/google-chrome-beta/Default/Cookies'
+            ])
+            cookie_file = cookie_file or next(filter(os.path.exists, paths), None)
         elif sys.platform == "win32":
             # get cookie file from APPDATA
             # Note: in windows the \\ is required before a u to stop unicode errors
