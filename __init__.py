@@ -10,6 +10,8 @@ import tempfile
 import lz4.block
 import datetime
 import configparser
+import base64
+from Crypto.Cipher import AES
 
 try:
     import json
@@ -125,6 +127,31 @@ class Chrome:
                 or os.path.expanduser('~/.config/chromium/Default/Cookies') \
                 or os.path.expanduser('~/.config/google-chrome-beta/Default/Cookies')
         elif sys.platform == "win32":
+
+            # Read key from file
+            key_file = glob.glob(
+                os.path.join(os.getenv('APPDATA', ''), '..\Local\\Google\\Chrome\\User Data\\Local State')) \
+                       or glob.glob(
+                os.path.join(os.getenv('LOCALAPPDATA', ''), 'Google\\Chrome\\User Data\\Local State')) \
+                       or glob.glob(os.path.join(os.getenv('APPDATA', ''), 'Google\\Chrome\\User Data\\Local State'))
+
+            if isinstance(key_file, list):
+                if key_file:
+                    key_file = key_file[0]
+
+            if key_file:
+                f = open(key_file, 'rb')
+                key_file_json = json.load(f)
+                key64 = key_file_json['os_crypt']['encrypted_key'].encode('utf-8')
+
+                # Decode Key, get rid of DPAPI prefix, unprotect data
+                keydpapi = base64.standard_b64decode(key64)[5:]
+                _, self.key = crypt_unprotect_data(keydpapi)
+
+                # Pad key to get to 32 bytes
+                while len(self.key) < 32:
+                    self.key = bytearray.fromhex('00') + self.key
+
             # get cookie file from APPDATA
             # Note: in windows the \\ is required before a u to stop unicode errors
             cookie_file = cookie_file or windows_group_policy_path() \
@@ -170,10 +197,18 @@ class Chrome:
             host, path, secure, expires, name = item[:5]
             if item[3] != 0:
                 # ensure dates don't exceed the datetime limit of year 10000
-                offset = min(int(item[3]), 265000000000000000)
-                delta = datetime.timedelta(microseconds=offset)
-                expires = epoch_start + delta
-                expires = expires.timestamp()
+                try:
+                    offset = min(int(item[3]), 265000000000000000)
+                    delta = datetime.timedelta(microseconds=offset)
+                    expires = epoch_start + delta
+                    expires = expires.timestamp()
+                # Windows 7 has a further constraint
+                except OSError:
+                    offset = min(int(item[3]), 32536799999000000)
+                    delta = datetime.timedelta(microseconds=offset)
+                    expires = epoch_start + delta
+                    expires = expires.timestamp()
+
             value = self._decrypt(item[5], item[6])
             c = create_cookie(host, path, secure, expires, name, value)
             cj.set_cookie(c)
@@ -198,7 +233,16 @@ class Chrome:
         """
 
         if sys.platform == 'win32':
-            return self._decrypt_windows_chrome(value, encrypted_value)
+            try:
+                return self._decrypt_windows_chrome(value, encrypted_value)
+
+            # Fix for change in Chrome 80
+            except RuntimeError: # Failed to decrypt the cipher text with DPAPI
+                if not self.key:
+                    raise RuntimeError('Failed to decrypt with DPAPI and no AES key.')
+                aes = AES.new(self.key, AES.MODE_GCM)
+                data = aes.decrypt(encrypted_value)
+                return data
 
         if value or (encrypted_value[:3] != b'v10'):
             return value
