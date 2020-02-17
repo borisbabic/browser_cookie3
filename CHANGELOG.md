@@ -1,3 +1,5 @@
+### 0.10.2
+- [CHROME] Fix default chromium path on linux
 ### 0.10.1
 - [CHROME] Fix decryption on windows
 - [CHROME] Fix windows timestamp OSError issue
