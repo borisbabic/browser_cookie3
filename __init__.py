@@ -90,8 +90,10 @@ def crypt_unprotect_data(
     CRYPTPROTECT_UI_FORBIDDEN = 0x01
 
     if not ctypes.windll.crypt32.CryptUnprotectData(
-            ctypes.byref(blob_in), ctypes.byref(desc), ctypes.byref(blob_entropy),
-            reserved, prompt_struct, CRYPTPROTECT_UI_FORBIDDEN, ctypes.byref(blob_out)
+            ctypes.byref(blob_in), ctypes.byref(
+                desc), ctypes.byref(blob_entropy),
+            reserved, prompt_struct, CRYPTPROTECT_UI_FORBIDDEN, ctypes.byref(
+                blob_out)
     ):
         raise RuntimeError('Failed to decrypt the cipher text with DPAPI')
 
@@ -114,29 +116,34 @@ class Chrome:
         self.domain_name = domain_name
         if sys.platform == 'darwin':
             # running Chrome on OSX
-            my_pass = keyring.get_password('Chrome Safe Storage', 'Chrome').encode('utf8')  # get key from keyring
+            my_pass = keyring.get_password('Chrome Safe Storage', 'Chrome').encode(
+                'utf8')  # get key from keyring
             iterations = 1003  # number of pbkdf2 iterations on mac
-            self.key = PBKDF2(my_pass, self.salt, iterations=iterations).read(self.length)
+            self.key = PBKDF2(my_pass, self.salt,
+                              iterations=iterations).read(self.length)
             cookie_file = cookie_file \
                 or os.path.expanduser('~/Library/Application Support/Google/Chrome/Default/Cookies')
 
         elif sys.platform.startswith('linux'):
             # running Chrome on Linux
-            my_pass = 'peanuts'.encode('utf8')  # chrome linux is encrypted with the key peanuts
+            # chrome linux is encrypted with the key peanuts
+            my_pass = 'peanuts'.encode('utf8')
             iterations = 1
-            self.key = PBKDF2(my_pass, self.salt, iterations=iterations).read(self.length)
+            self.key = PBKDF2(my_pass, self.salt,
+                              iterations=iterations).read(self.length)
             paths = map(os.path.expanduser, [
                 '~/.config/google-chrome/Default/Cookies',
                 '~/.config/chromium/Default/Cookies',
                 '~/.config/google-chrome-beta/Default/Cookies'
             ])
-            cookie_file = cookie_file or next(filter(os.path.exists, paths), None)
+            cookie_file = cookie_file or next(
+                filter(os.path.exists, paths), None)
         elif sys.platform == "win32":
 
             # Read key from file
             key_file = glob.glob(os.path.join(os.getenv('APPDATA', ''), '..\Local\\Google\\Chrome\\User Data\\Local State')) \
-                       or glob.glob(os.path.join(os.getenv('LOCALAPPDATA', ''), 'Google\\Chrome\\User Data\\Local State')) \
-                       or glob.glob(os.path.join(os.getenv('APPDATA', ''), 'Google\\Chrome\\User Data\\Local State'))
+                or glob.glob(os.path.join(os.getenv('LOCALAPPDATA', ''), 'Google\\Chrome\\User Data\\Local State')) \
+                or glob.glob(os.path.join(os.getenv('APPDATA', ''), 'Google\\Chrome\\User Data\\Local State'))
 
             if isinstance(key_file, list):
                 if key_file:
@@ -145,7 +152,8 @@ class Chrome:
             if key_file:
                 f = open(key_file, 'rb')
                 key_file_json = json.load(f)
-                key64 = key_file_json['os_crypt']['encrypted_key'].encode('utf-8')
+                key64 = key_file_json['os_crypt']['encrypted_key'].encode(
+                    'utf-8')
 
                 # Decode Key, get rid of DPAPI prefix, unprotect data
                 keydpapi = base64.standard_b64decode(key64)[5:]
@@ -158,7 +166,8 @@ class Chrome:
                 or glob.glob(os.path.join(os.getenv('LOCALAPPDATA', ''), 'Google\\Chrome\\User Data\\Default\\Cookies')) \
                 or glob.glob(os.path.join(os.getenv('APPDATA', ''), 'Google\\Chrome\\User Data\\Default\\Cookies'))
         else:
-            raise BrowserCookieError("OS not recognized. Works on Chrome for OSX, Windows, and Linux.")
+            raise BrowserCookieError(
+                "OS not recognized. Works on Chrome for OSX, Windows, and Linux.")
 
         # if the type of cookie_file is list, use the first element in the list
         if isinstance(cookie_file, list):
@@ -191,7 +200,7 @@ class Chrome:
                         'FROM cookies WHERE host_key like "%{}%";'.format(self.domain_name))
 
         cj = http.cookiejar.CookieJar()
-        epoch_start = datetime.datetime(1601,1,1)
+        epoch_start = datetime.datetime(1601, 1, 1)
         for item in cur.fetchall():
             host, path, secure, expires, name = item[:5]
             if item[3] != 0:
@@ -238,13 +247,13 @@ class Chrome:
             # Fix for change in Chrome 80
             except RuntimeError:  # Failed to decrypt the cipher text with DPAPI
                 if not self.key:
-                    raise RuntimeError('Failed to decrypt the cipher text with DPAPI and no AES key.')
+                    raise RuntimeError(
+                        'Failed to decrypt the cipher text with DPAPI and no AES key.')
                 # Encrypted cookies should be prefixed with 'v10' according to the
                 # Chromium code. Strip it off.
                 encrypted_value = encrypted_value[3:]
                 nonce, tag = encrypted_value[:12], encrypted_value[-16:]
                 aes = AES.new(self.key, AES.MODE_GCM, nonce=nonce)
-
 
                 data = aes.decrypt_and_verify(encrypted_value[12:-16], tag)
                 return data.decode()
@@ -257,7 +266,8 @@ class Chrome:
         encrypted_value = encrypted_value[3:]
         encrypted_value_half_len = int(len(encrypted_value) / 2)
 
-        cipher = pyaes.Decrypter(pyaes.AESModeOfOperationCBC(self.key, self.iv))
+        cipher = pyaes.Decrypter(
+            pyaes.AESModeOfOperationCBC(self.key, self.iv))
         decrypted = cipher.feed(encrypted_value[:encrypted_value_half_len])
         decrypted += cipher.feed(encrypted_value[encrypted_value_half_len:])
         decrypted += cipher.feed()
@@ -270,8 +280,10 @@ class Firefox:
         cookie_file = cookie_file or self.find_cookie_file()
         self.tmp_cookie_file = create_local_copy(cookie_file)
         # current sessions are saved in sessionstore.js
-        self.session_file = os.path.join(os.path.dirname(cookie_file), 'sessionstore.js')
-        self.session_file_lz4 = os.path.join(os.path.dirname(cookie_file), 'sessionstore-backups', 'recovery.jsonlz4')
+        self.session_file = os.path.join(
+            os.path.dirname(cookie_file), 'sessionstore.js')
+        self.session_file_lz4 = os.path.join(os.path.dirname(
+            cookie_file), 'sessionstore-backups', 'recovery.jsonlz4')
         # domain name to filter cookies by
         self.domain_name = domain_name
 
@@ -286,7 +298,8 @@ class Firefox:
     @staticmethod
     def get_default_profile(user_data_path):
         config = configparser.ConfigParser()
-        profiles_ini_path = glob.glob(os.path.join(user_data_path + '**', 'profiles.ini'))
+        profiles_ini_path = glob.glob(os.path.join(
+            user_data_path + '**', 'profiles.ini'))
         fallback_path = user_data_path + '**'
 
         if not profiles_ini_path:
@@ -317,16 +330,19 @@ class Firefox:
         cookie_files = []
 
         if sys.platform == 'darwin':
-            user_data_path = os.path.expanduser('~/Library/Application Support/Firefox')
+            user_data_path = os.path.expanduser(
+                '~/Library/Application Support/Firefox')
         elif sys.platform.startswith('linux'):
             user_data_path = os.path.expanduser('~/.mozilla/firefox')
         elif sys.platform == 'win32':
-            user_data_path = os.path.join(os.environ.get('APPDATA'), 'Mozilla', 'Firefox')
+            user_data_path = os.path.join(
+                os.environ.get('APPDATA'), 'Mozilla', 'Firefox')
             # legacy firefox <68 fallback
             cookie_files = glob.glob(os.path.join(os.environ.get('PROGRAMFILES'), 'Mozilla Firefox', 'profile', 'cookies.sqlite')) \
                 or glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)'), 'Mozilla Firefox', 'profile', 'cookies.sqlite'))
         else:
-            raise BrowserCookieError('Unsupported operating system: ' + sys.platform)
+            raise BrowserCookieError(
+                'Unsupported operating system: ' + sys.platform)
 
         cookie_files = glob.glob(os.path.join(Firefox.get_default_profile(user_data_path), 'cookies.sqlite')) \
             or cookie_files
@@ -346,7 +362,8 @@ class Firefox:
         if not os.path.exists(self.session_file):
             return
         try:
-            json_data = json.loads(open(self.session_file, 'rb').read().decode())
+            json_data = json.loads(
+                open(self.session_file, 'rb').read().decode())
         except ValueError as e:
             print('Error parsing firefox session JSON:', str(e))
         else:
