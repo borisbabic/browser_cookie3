@@ -107,6 +107,55 @@ def crypt_unprotect_data(
         return description, buffer_out.value
 
 
+def get_linux_pass(browser="Chrome"):
+    # Try to get pass from Gnome / libsecret if it seems available
+    # https://github.com/n8henrie/pycookiecheat/issues/12
+    my_pass = None
+    try:
+        import gi
+
+        gi.require_version("Secret", "1")
+        from gi.repository import Secret
+    except ImportError:
+        pass
+    else:
+        flags = Secret.ServiceFlags.LOAD_COLLECTIONS
+        service = Secret.Service.get_sync(flags)
+
+        gnome_keyring = service.get_collections()
+        unlocked_keyrings = service.unlock_sync(gnome_keyring).unlocked
+
+        keyring_name = "{} Safe Storage".format(browser.capitalize())
+
+        for unlocked_keyring in unlocked_keyrings:
+            for item in unlocked_keyring.get_items():
+                if item.get_label() == keyring_name:
+                    item.load_secret_sync()
+                    my_pass = item.get_secret().get_text()
+                    break
+            else:
+                # Inner loop didn't `break`, keep looking
+                continue
+
+            # Inner loop did `break`, so `break` outer loop
+            break
+
+    # Try to get pass from keyring, which should support KDE / KWallet
+    # if dbus-python is installed.
+    if not my_pass:
+        try:
+            my_pass = keyring.get_password(
+                "{} Keys".format(browser), "{} Safe Storage".format(browser)
+            )
+        except RuntimeError:
+            pass
+
+    if my_pass:
+        return my_pass
+    else:
+        return "peanuts"
+
+
 class Chrome:
     def __init__(self, cookie_file=None, domain_name=""):
         self.salt = b'saltysalt'
@@ -127,7 +176,7 @@ class Chrome:
         elif sys.platform.startswith('linux'):
             # running Chrome on Linux
             # chrome linux is encrypted with the key peanuts
-            my_pass = 'peanuts'.encode('utf8')
+            my_pass = get_linux_pass().encode('utf8')
             iterations = 1
             self.key = PBKDF2(my_pass, self.salt,
                               iterations=iterations).read(self.length)
@@ -258,7 +307,7 @@ class Chrome:
                 data = aes.decrypt_and_verify(encrypted_value[12:-16], tag)
                 return data.decode()
 
-        if value or (encrypted_value[:3] != b'v10'):
+        if value or (encrypted_value[:3] not in [b'v11', b'v10']):
             return value
 
         # Encrypted cookies should be prefixed with 'v10' according to the
