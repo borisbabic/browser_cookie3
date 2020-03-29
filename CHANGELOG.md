@@ -1,3 +1,5 @@
+### 0.11.0
+- [CHROME] Support libsecret
 ### 0.10.2
 - [CHROME] Fix default chromium path on linux
 ### 0.10.1
