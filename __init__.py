@@ -116,7 +116,7 @@ def get_linux_pass(browser="Chrome"):
 
         gi.require_version("Secret", "1")
         from gi.repository import Secret
-    except ImportError:
+    except (ImportError, AttributeError):
         pass
     else:
         flags = Secret.ServiceFlags.LOAD_COLLECTIONS
