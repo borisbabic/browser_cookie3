@@ -1,3 +1,5 @@
+### 0.11.1
+- [GNOME|ARCH] Improve libsecret detection
 ### 0.11.0
 - [CHROME] Support libsecret
 ### 0.10.2
