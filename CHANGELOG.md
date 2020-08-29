@@ -1,3 +1,5 @@
+### 0.11.2
+- [EDGE|Chromium based] Support setting the key file 
 ### 0.11.1
 - [GNOME|ARCH] Improve libsecret detection
 ### 0.11.0
