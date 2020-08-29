@@ -157,7 +157,7 @@ def get_linux_pass(browser="Chrome"):
 
 
 class Chrome:
-    def __init__(self, key_file=None, cookie_file=None, domain_name=""):
+    def __init__(self, cookie_file=None, domain_name="", key_file=None):
         self.salt = b'saltysalt'
         self.iv = b' ' * 16
         self.length = 16
@@ -458,11 +458,11 @@ def create_cookie(host, path, secure, expires, name, value):
                                  True, secure, expires, False, None, None, {})
 
 
-def chrome(key_file=None, cookie_file=None, domain_name=""):
+def chrome(cookie_file=None, domain_name="", key_file=None):
     """Returns a cookiejar of the cookies used by Chrome. Optionally pass in a
     domain name to only load cookies from the specified domain
     """
-    return Chrome(key_file, cookie_file, domain_name).load()
+    return Chrome(cookie_file, domain_name, key_file).load()
 
 
 def firefox(cookie_file=None, domain_name=""):
