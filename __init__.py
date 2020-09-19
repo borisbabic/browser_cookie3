@@ -152,8 +152,6 @@ def get_linux_pass(browser="Chrome"):
 
     if my_pass:
         return my_pass
-    else:
-        return "peanuts"
 
 
 class Chrome:
@@ -176,7 +174,14 @@ class Chrome:
         elif sys.platform.startswith('linux'):
             # running Chrome on Linux
             # chrome linux is encrypted with the key peanuts
-            my_pass = get_linux_pass().encode('utf8')
+            for name in ('Chrome', 'Chromium'):
+                my_pass = get_linux_pass(name)
+                if my_pass is not None:
+                    my_pass = my_pass.encode('utf8')
+                    break
+            else:
+                # try default
+                my_pass = 'peanuts'
             iterations = 1
             self.key = PBKDF2(my_pass, self.salt,
                               iterations=iterations).read(self.length)
