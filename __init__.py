@@ -418,7 +418,8 @@ class Firefox:
         else:
             for window in json_data.get('windows', []):
                 for cookie in window.get('cookies', []):
-                    cj.set_cookie(Firefox.__create_session_cookie(cookie))
+                    if self.domain_name == '' or self.domain_name in cookie.get('host', ''):
+                        cj.set_cookie(Firefox.__create_session_cookie(cookie))
 
     def __add_session_cookies_lz4(self, cj):
         if not os.path.exists(self.session_file_lz4):
@@ -431,7 +432,8 @@ class Firefox:
             print('Error parsing firefox session JSON LZ4:', str(e))
         else:
             for cookie in json_data.get('cookies', []):
-                cj.set_cookie(Firefox.__create_session_cookie(cookie))
+                if self.domain_name == '' or self.domain_name in cookie.get('host', ''):
+                    cj.set_cookie(Firefox.__create_session_cookie(cookie))
 
     def load(self):
         con = sqlite3.connect(self.tmp_cookie_file)
