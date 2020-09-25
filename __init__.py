@@ -173,25 +173,34 @@ class Chrome:
 
         elif sys.platform.startswith('linux'):
             # running Chrome on Linux
-            # chrome linux is encrypted with the key peanuts
             for name in ('Chrome', 'Chromium'):
                 my_pass = get_linux_pass(name)
                 if my_pass is not None:
                     my_pass = my_pass.encode('utf8')
+                    if name == 'Chromium':
+                        paths = map(os.path.expanduser, [
+                            '~/.config/chromium/Default/Cookies',
+                        ])
+                    else:
+                        paths = map(os.path.expanduser, [
+                            '~/.config/google-chrome/Default/Cookies',
+                            '~/.config/google-chrome-beta/Default/Cookies'
+                        ])
                     break
             else:
-                # try default
+                # try default key 'peanuts' with all possible paths (probably won't work)
                 my_pass = 'peanuts'
+                paths = map(os.path.expanduser, [
+                    '~/.config/google-chrome/Default/Cookies',
+                    '~/.config/chromium/Default/Cookies',
+                    '~/.config/google-chrome-beta/Default/Cookies'
+                ])
             iterations = 1
             self.key = PBKDF2(my_pass, self.salt,
                               iterations=iterations).read(self.length)
-            paths = map(os.path.expanduser, [
-                '~/.config/google-chrome/Default/Cookies',
-                '~/.config/chromium/Default/Cookies',
-                '~/.config/google-chrome-beta/Default/Cookies'
-            ])
             cookie_file = cookie_file or next(
                 filter(os.path.exists, paths), None)
+
         elif sys.platform == "win32":
 
             # Read key from file
