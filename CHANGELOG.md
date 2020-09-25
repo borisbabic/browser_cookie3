@@ -1,3 +1,5 @@
+### 0.11.3
+- [FIREFOX] Add only cookies from the specified domain
 ### 0.11.2
 - [EDGE|Chromium based] Support setting the key file 
 ### 0.11.1
