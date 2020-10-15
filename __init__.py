@@ -218,6 +218,10 @@ class Chrome:
             raise BrowserCookieError(
                 "OS not recognized. Works on Chrome for OSX, Windows, and Linux.")
 
+        # if the cookie_file is None, could not find a Chrome cookie
+        if cookie_file is None:
+            raise BrowserCookieError('Failed to find Chrome cookie')
+        
         # if the type of cookie_file is list, use the first element in the list
         if isinstance(cookie_file, list):
             if not cookie_file:
