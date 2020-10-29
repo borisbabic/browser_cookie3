@@ -1,3 +1,6 @@
+### 0.11.4
+- [CHROME] Support Chromium v80
+- [CHROME] Better error when missing cookie file
 ### 0.11.3
 - [FIREFOX] Add only cookies from the specified domain
 ### 0.11.2
