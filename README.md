@@ -101,14 +101,17 @@ So far the following platforms are supported:
 
 * **Chrome:** Linux, OSX, Windows
 * **Firefox:** Linux, OSX, Windows
+* **Opera:** Linux, Windows
+* **Edge:** Linux, Windows
+* **Chromium:** Linux, Windows
 
 ## Testing Dates  ##
 
-OS      | Chrome | Firefox |
-:------ | :----: | :-----: |
-Mac     | 1/6/16 | 1/6/16  |
-Linux   | 1/6/16 | 1/6/16  |
-Windows | 1/6/16 | n/a     |
+OS      | Chrome | Firefox |  Opera  |   Edge   | Chromium |
+:------ | :----: | :-----: | :-----: | :------: | :------: |
+Mac     | 1/6/16 | 1/6/16  | n/a     | n/a      | n/a      |
+Linux   | 7/12/20| 7/12/20 | 7/12/20 | 7/12/20  | 7/12/20  |
+Windows | 7/12/20| 7/12/20 | 7/12/20 | 7/12/20  | 7/12/20  |
 
 However I only tested on a single version of each browser and so am not sure if the cookie sqlite format changes location or format in earlier/later versions. If you experience a problem please [open an issue](https://github.com/borisbabic/browser_cookie3/issues/new) which includes details of the browser version and operating system. Also patches to support other browsers are very welcome, particularly for Chrome and Internet Explorer on Windows.
 

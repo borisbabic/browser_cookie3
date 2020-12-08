@@ -108,6 +108,8 @@ def crypt_unprotect_data(
 
 
 def get_linux_pass(os_crypt_name):
+    '''Retrive password used to encrypt cookies from libsecret.
+    '''
     # https://github.com/n8henrie/pycookiecheat/issues/12
     my_pass = None
 
@@ -165,6 +167,8 @@ def expand_paths(paths:list, os_name:str):
 
 
 class ChromiumBased:
+    '''Super class for all Chromium based browser.
+    '''
     def __init__(self, browser:str, cookie_file=None, domain_name="", key_file=None, **kwargs):
         self.salt = b'saltysalt'
         self.iv = b' ' * 16
@@ -369,6 +373,8 @@ class Chrome(ChromiumBased):
 
 class Chromium(ChromiumBased):
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
+        if sys.platform == 'darwin':
+            raise NotImplementedError(f'{self.__class__.__name__} on OSX has not been implemented yet.')
         args = {
             'linux_cookies':['~/.config/chromium/Default/Cookies'],
             'windows_cookies':[
@@ -390,6 +396,8 @@ class Chromium(ChromiumBased):
 
 class Opera(ChromiumBased):
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
+        if sys.platform == 'darwin':
+            raise NotImplementedError(f'{self.__class__.__name__} on OSX has not been implemented yet.')
         args = {
             'linux_cookies': ['~/.config/opera/Cookies'],
             'windows_cookies':[
@@ -412,6 +420,8 @@ class Opera(ChromiumBased):
 
 class Edge(ChromiumBased):
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
+        if sys.platform == 'darwin':
+            raise NotImplementedError(f'{self.__class__.__name__} on OSX has not been implemented yet.')
         args = {
             'linux_cookies': [
                 '~/.config/microsoft-edge-dev/Default/Cookies',
