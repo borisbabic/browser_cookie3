@@ -190,7 +190,7 @@ class ChromiumBased:
             # try default peanuts password, probably won't work
             if not my_pass:
                 my_pass = 'peanuts'
-            my_pass = mypass.encode('utf-8')
+            my_pass = my_pass.encode('utf-8')
 
             iterations = 1003  # number of pbkdf2 iterations on mac
             self.key = PBKDF2(my_pass, self.salt,
@@ -373,8 +373,6 @@ class Chrome(ChromiumBased):
 
 class Chromium(ChromiumBased):
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
-        if sys.platform == 'darwin':
-            raise NotImplementedError(f'{self.__class__.__name__} on OSX has not been implemented yet.')
         args = {
             'linux_cookies':['~/.config/chromium/Default/Cookies'],
             'windows_cookies':[
@@ -382,22 +380,20 @@ class Chromium(ChromiumBased):
                     {'env':'LOCALAPPDATA', 'path':'Chromium\\User Data\\Default\\Cookies'},
                     {'env':'APPDATA', 'path':'Chromium\\User Data\\Default\\Cookies'}
             ],
-            'osx_cookies': None, # I don't have a Mac to try
+            'osx_cookies': ['~/Library/Application Support/Chromium/Default/Cookies'],
             'windows_keys': [
                     {'env':'APPDATA', 'path':'..\\Local\\Chromium\\User Data\\Local State'},
                     {'env':'LOCALAPPDATA', 'path':'Chromium\\User Data\\Local State'},
                     {'env':'APPDATA', 'path':'Chromium\\User Data\\Local State'}
             ],
             'os_crypt_name':'chromium',
-            'osx_key_service' : None, # I don't have a Mac to try
-            'osx_key_user' : None, # I don't have a Mac to try
+            'osx_key_service' : 'Chromium Safe Storage',
+            'osx_key_user' : 'Chromium'
         }
         super().__init__(browser='Chromium', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
 
 class Opera(ChromiumBased):
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
-        if sys.platform == 'darwin':
-            raise NotImplementedError(f'{self.__class__.__name__} on OSX has not been implemented yet.')
         args = {
             'linux_cookies': ['~/.config/opera/Cookies'],
             'windows_cookies':[
@@ -405,23 +401,21 @@ class Opera(ChromiumBased):
                     {'env':'LOCALAPPDATA', 'path':'Opera Software\\Opera Stable\\Cookies'},
                     {'env':'APPDATA', 'path':'Opera Software\\Opera Stable\\Cookies'}
             ],
-            'osx_cookies': None, # I don't have a Mac to try
+            'osx_cookies': ['~/Library/Application Support/com.operasoftware.Opera/Cookies'],
             'windows_keys': [
                     {'env':'APPDATA', 'path':'..\\Local\\Opera Software\\Opera Stable\\Local State'},
                     {'env':'LOCALAPPDATA', 'path':'Opera Software\\Opera Stable\\Local State'},
                     {'env':'APPDATA', 'path':'Opera Software\\Opera Stable\\Local State'}
             ],
             'os_crypt_name':'chromium',
-            'osx_key_service' : None, # I don't have a Mac to try
-            'osx_key_user' : None, # I don't have a Mac to try
+            'osx_key_service' : 'Opera Safe Storage',
+            'osx_key_user' : 'Opera'
         }
 
         super().__init__(browser='Opera', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
 
 class Edge(ChromiumBased):
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
-        if sys.platform == 'darwin':
-            raise NotImplementedError(f'{self.__class__.__name__} on OSX has not been implemented yet.')
         args = {
             'linux_cookies': [
                 '~/.config/microsoft-edge-dev/Default/Cookies',
@@ -432,15 +426,15 @@ class Edge(ChromiumBased):
                     {'env':'LOCALAPPDATA', 'path':'Microsoft\\Edge\\User Data\\Default\\Cookies'},
                     {'env':'APPDATA', 'path':'Microsoft\\Edge\\User Data\\Default\\Cookies'}
             ],
-            'osx_cookies': None, # I don't have a Mac to try
+            'osx_cookies': ['~/Library/Application Support/Microsoft Edge/Default/Cookies'],
             'windows_keys': [
                     {'env':'APPDATA', 'path':'..\\Local\\Microsoft\\Edge\\User Data\\Local State'},
                     {'env':'LOCALAPPDATA', 'path':'Microsoft\\Edge\\User Data\\Local State'},
                     {'env':'APPDATA', 'path':'Microsoft\\Edge\\User Data\\Local State'}
             ],
             'os_crypt_name':'chromium',
-            'osx_key_service' : None, # I don't have a Mac to try
-            'osx_key_user' : None, # I don't have a Mac to try
+            'osx_key_service' : 'Microsoft Edge Safe Storage',
+            'osx_key_user' : 'Microsoft Edge'
         }
 
         super().__init__(browser='Edge', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
@@ -628,5 +622,4 @@ def load(domain_name=""):
 
 if __name__ == '__main__':
     print(load())
-
 
