@@ -136,6 +136,16 @@ def get_linux_pass(os_crypt_name):
 
     connection.close()
 
+    # Try to get pass from keyring, which should support KDE / KWallet
+    if not my_pass:
+        try:
+            my_pass = keyring.get_password(
+                "{} Keys".format(os_crypt_name.capitalize()),
+                "{} Safe Storage".format(os_crypt_name.capitalize())
+            ).encode('utf-8')
+        except RuntimeError:
+            pass
+
     # try default peanuts password, probably won't work
     if not my_pass:
         my_pass = 'peanuts'.encode('utf-8')
@@ -418,8 +428,8 @@ class Edge(ChromiumBased):
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
         args = {
             'linux_cookies': [
-                '~/.config/microsoft-edge-dev/Default/Cookies',
-                '~/.config/microsoft-edge/Default/Cookies'
+                '~/.config/microsoft-edge/Default/Cookies',
+                '~/.config/microsoft-edge-dev/Default/Cookies'
             ],
             'windows_cookies':[
                     {'env':'APPDATA', 'path':'..\\Local\\Microsoft\\Edge\\User Data\\Default\\Cookies'},
