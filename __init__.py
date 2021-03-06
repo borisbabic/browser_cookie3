@@ -12,7 +12,7 @@ import datetime
 import configparser
 import base64
 from Crypto.Cipher import AES
-from typing import Union
+from typing import Union, Iterable
 
 try:
     import json
@@ -157,6 +157,19 @@ def __expand_win_path(path:Union[dict,str]):
         path = {'path': path}
     return os.path.join(os.getenv(path['env'], ''), path['path'])
 
+def __add_more_possible_paths(paths: Iterable[str]):
+    # User data may saved in ../User Data/[Default|Profile N|Guest Profile]/...
+    possible_path_list = []
+    subs = ['Profile ' + str(n) for n in range(1, 10)] + ['Guest Profile']
+
+    for path in paths:
+        possible_path_list.append(path)
+        if 'Default' not in path:
+            continue
+        for sub in subs:
+            possible_path_list.append(path.replace('Default', sub))
+    return possible_path_list
+
 def expand_paths(paths:list, os_name:str):
     '''Expands user paths on Linux, OSX, and windows
     '''
@@ -171,7 +184,7 @@ def expand_paths(paths:list, os_name:str):
         paths = map(__expand_win_path, paths)
     else:
         paths = map(os.path.expanduser, paths)
-    
+    paths = __add_more_possible_paths(paths)
     paths = next(filter(os.path.exists, paths), None)
     return paths
 
