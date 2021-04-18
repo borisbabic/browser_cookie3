@@ -108,8 +108,7 @@ def crypt_unprotect_data(
 
 
 def get_linux_pass(os_crypt_name):
-    '''Retrive password used to encrypt cookies from libsecret.
-    '''
+    """Retrive password used to encrypt cookies from libsecret"""
     # https://github.com/n8henrie/pycookiecheat/issues/12
     my_pass = None
 
@@ -158,8 +157,7 @@ def __expand_win_path(path:Union[dict,str]):
     return os.path.join(os.getenv(path['env'], ''), path['path'])
 
 def expand_paths(paths:list, os_name:str):
-    '''Expands user paths on Linux, OSX, and windows
-    '''
+    """Expands user paths on Linux, OSX, and windows"""
 
     os_name = os_name.lower()
     assert os_name in ['windows', 'osx', 'linux']
@@ -182,8 +180,7 @@ def text_factory(data):
         return data
 
 class ChromiumBased:
-    '''Super class for all Chromium based browser.
-    '''
+    """Super class for all Chromium based browser"""
     def __init__(self, browser:str, cookie_file=None, domain_name="", key_file=None, **kwargs):
         self.salt = b'saltysalt'
         self.iv = b' ' * 16
@@ -222,7 +219,6 @@ class ChromiumBased:
             
             cookie_file = self.cookie_file or expand_paths(linux_cookies, 'linux')
 
-        
         elif sys.platform == "win32":
             key_file = self.key_file or expand_paths(windows_keys,'windows')
 
@@ -263,8 +259,7 @@ class ChromiumBased:
         return self.browser
     
     def load(self):
-        """Load sqlite cookies into a cookiejar
-        """
+        """Load sqlite cookies into a cookiejar"""
         con = sqlite3.connect(self.tmp_cookie_file)
         con.text_factory = text_factory
         cur = con.cursor()
@@ -315,8 +310,7 @@ class ChromiumBased:
         return data.decode()
 
     def _decrypt(self, value, encrypted_value):
-        """Decrypt encoded cookies
-        """
+        """Decrypt encoded cookies"""
 
         if sys.platform == 'win32':
             try:
@@ -363,6 +357,7 @@ class ChromiumBased:
         return decrypted.decode("utf-8")
 
 class Chrome(ChromiumBased):
+    """Class for Google Chrome"""
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
         args = {
             'linux_cookies':[
@@ -388,6 +383,7 @@ class Chrome(ChromiumBased):
         super().__init__(browser='Chrome', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
 
 class Chromium(ChromiumBased):
+    """Class for Chromium"""
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
         args = {
             'linux_cookies':['~/.config/chromium/Default/Cookies'],
@@ -409,6 +405,7 @@ class Chromium(ChromiumBased):
         super().__init__(browser='Chromium', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
 
 class Opera(ChromiumBased):
+    """Class for Opera"""
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
         args = {
             'linux_cookies': ['~/.config/opera/Cookies'],
@@ -431,6 +428,7 @@ class Opera(ChromiumBased):
         super().__init__(browser='Opera', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
 
 class Edge(ChromiumBased):
+    """Class for Microsoft Edge"""
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
         args = {
             'linux_cookies': [
@@ -456,6 +454,7 @@ class Edge(ChromiumBased):
         super().__init__(browser='Edge', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
 
 class Firefox:
+    """Class for Firefox"""
     def __init__(self, cookie_file=None, domain_name=""):
         self.tmp_cookie_file = None
         cookie_file = cookie_file or self.find_cookie_file()
@@ -586,8 +585,7 @@ class Firefox:
 
 
 def create_cookie(host, path, secure, expires, name, value):
-    """Shortcut function to create a cookie
-    """
+    """Shortcut function to create a cookie"""
     return http.cookiejar.Cookie(0, name, value, None, False, host, host.startswith('.'), host.startswith('.'), path,
                                  True, secure, expires, False, None, None, {})
 
