@@ -175,6 +175,11 @@ def expand_paths(paths:list, os_name:str):
     paths = next(filter(os.path.exists, paths), None)
     return paths
 
+def text_factory(data):
+    try:
+        return data.decode('utf-8')
+    except UnicodeDecodeError:
+        return data
 
 class ChromiumBased:
     '''Super class for all Chromium based browser.
@@ -261,6 +266,7 @@ class ChromiumBased:
         """Load sqlite cookies into a cookiejar
         """
         con = sqlite3.connect(self.tmp_cookie_file)
+        con.text_factory = text_factory
         cur = con.cursor()
         try:
             # chrome <=55
