@@ -442,7 +442,7 @@ class Brave(ChromiumBased):
                     {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Local State'},
                     {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Local State'}
             ],
-            'os_crypt_name':'chromium',
+            'os_crypt_name':'brave',
             'osx_key_service' : 'Brave Safe Storage',
             'osx_key_user' : 'Brave'
         }
