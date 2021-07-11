@@ -427,6 +427,27 @@ class Opera(ChromiumBased):
 
         super().__init__(browser='Opera', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
 
+class Brave(ChromiumBased):
+    def __init__(self, cookie_file=None, domain_name="", key_file=None):
+        args = {
+            'linux_cookies':['~/.config/BraveSoftware/Brave-Browser/Default/Cookies'],
+            'windows_cookies':[
+                    {'env':'APPDATA', 'path':'..\\Local\\BraveSoftware\\Brave-Browser\\User Data\\Default\\Cookies'},
+                    {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Default\\Cookies'},
+                    {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Default\\Cookies'}
+            ],
+            'osx_cookies': ['~/Library/Application Support/BraveSoftware/Brave-Browser/Default/Cookies'],
+            'windows_keys': [
+                    {'env':'APPDATA', 'path':'..\\Local\\BraveSoftware\\Brave-Browser\\User Data\\Local State'},
+                    {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Local State'},
+                    {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Local State'}
+            ],
+            'os_crypt_name':'chromium',
+            'osx_key_service' : 'Brave Safe Storage',
+            'osx_key_user' : 'Brave'
+        }
+        super().__init__(browser='Brave', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
+
 class Edge(ChromiumBased):
     """Class for Microsoft Edge"""
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
@@ -607,6 +628,12 @@ def opera(cookie_file=None, domain_name="", key_file=None):
     """
     return Opera(cookie_file, domain_name, key_file).load()
 
+def brave(cookie_file=None, domain_name="", key_file=None):
+    """Returns a cookiejar of the cookies and sessions used by Brave. Optionally
+    pass in a domain name to only load cookies from the specified domain
+    """
+    return Brave(cookie_file, domain_name, key_file).load()
+
 def edge(cookie_file=None, domain_name="", key_file=None):
     """Returns a cookiejar of the cookies used by Microsoft Egde. Optionally pass in a
     domain name to only load cookies from the specified domain
@@ -625,7 +652,7 @@ def load(domain_name=""):
     Optionally pass in a domain name to only load cookies from the specified domain
     """
     cj = http.cookiejar.CookieJar()
-    for cookie_fn in [chrome, chromium, opera, edge, firefox]:
+    for cookie_fn in [chrome, chromium, opera, brave, edge, firefox]:
         try:
             for cookie in cookie_fn(domain_name=domain_name):
                 cj.set_cookie(cookie)
