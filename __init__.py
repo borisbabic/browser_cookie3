@@ -430,7 +430,10 @@ class Opera(ChromiumBased):
 class Brave(ChromiumBased):
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
         args = {
-            'linux_cookies':['~/.config/BraveSoftware/Brave-Browser/Default/Cookies'],
+            'linux_cookies':[
+                    '~/.config/BraveSoftware/Brave-Browser/Default/Cookies',
+                    '~/.config/BraveSoftware/Brave-Browser-Beta/Default/Cookies'
+            ],
             'windows_cookies':[
                     {'env':'APPDATA', 'path':'..\\Local\\BraveSoftware\\Brave-Browser\\User Data\\Default\\Cookies'},
                     {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Default\\Cookies'},
