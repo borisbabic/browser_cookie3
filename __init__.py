@@ -144,6 +144,8 @@ def get_linux_pass(os_crypt_name):
             ).encode('utf-8')
         except RuntimeError:
             pass
+        except AttributeError:
+            pass
 
     # try default peanuts password, probably won't work
     if not my_pass:
