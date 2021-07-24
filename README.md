@@ -128,3 +128,4 @@ However I only tested on a single version of each browser and so am not sure if 
 
 ## Acknowledgements ##
 Special thanks to Nathan Henrie for his example of [how to decode the Chrome cookies](http://n8henrie.com/2013/11/use-chromes-cookies-for-easier-downloading-with-python-requests/).
+{"mode":"full","isActive":false}
