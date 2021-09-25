@@ -266,11 +266,11 @@ class ChromiumBased:
         try:
             # chrome <=55
             cur.execute('SELECT host_key, path, secure, expires_utc, name, value, encrypted_value '
-                        'FROM cookies WHERE host_key like "%{}%";'.format(self.domain_name))
+                        'FROM cookies WHERE host_key like ?;', ('%{}%'.format(self.domain_name),))
         except sqlite3.OperationalError:
             # chrome >=56
             cur.execute('SELECT host_key, path, is_secure, expires_utc, name, value, encrypted_value '
-                        'FROM cookies WHERE host_key like "%{}%";'.format(self.domain_name))
+                        'FROM cookies WHERE host_key like ?;', ('%{}%'.format(self.domain_name),))
 
         cj = http.cookiejar.CookieJar()
         epoch_start = datetime.datetime(1601, 1, 1)
@@ -570,7 +570,7 @@ class Firefox:
         con = sqlite3.connect(self.tmp_cookie_file)
         cur = con.cursor()
         cur.execute('select host, path, isSecure, expiry, name, value from moz_cookies '
-                    'where host like "%{}%"'.format(self.domain_name))
+                    'where host like ?', ('%{}%'.format(self.domain_name),))
 
         cj = http.cookiejar.CookieJar()
         for item in cur.fetchall():
