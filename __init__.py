@@ -275,22 +275,24 @@ class ChromiumBased:
                         'FROM cookies WHERE host_key like "%{}%";'.format(self.domain_name))
 
         cj = http.cookiejar.CookieJar()
-        epoch_start = datetime.datetime(1601, 1, 1)
+
         for item in cur.fetchall():
-            host, path, secure, expires, name = item[:5]
-            if item[3] != 0:
+            # Chromium-Based browsers use expires_utc field as timestamp in cookie database, expires_utc is using NT time epoch, while http cookiejar is using Unix time epoch.
+            # NT time epoch, aka Win32 time/FILETIME, it starts from 1601-01-01 0:00:00 GMT, the unit is 100-nanosecond.
+            # Unix time epoch, aka UNIX EPOCH/POSIX, it starts from 1970-01-01 0:00:00 GMT, the unit is second.
+            # if this cookie only valid for this session, then expires_utc is 0 in Chromium-Based browsers' cookie database, it should be set None in cookiejar.
+            host, path, secure, expires_nt_time_epoch, name = item[:5]
+            if (expires_nt_time_epoch == 0):
+                expires = None
+            else:
                 # ensure dates don't exceed the datetime limit of year 10000
                 try:
-                    offset = min(int(item[3]), 265000000000000000)
-                    delta = datetime.timedelta(microseconds=offset)
-                    expires = epoch_start + delta
-                    expires = expires.timestamp()
+                    expires_nt_time_epoch = min(int(expires_nt_time_epoch), 265000000000000000)
+                    expires = (expires_nt_time_epoch/1000000)-11644473600
                 # Windows 7 has a further constraint
                 except OSError:
-                    offset = min(int(item[3]), 32536799999000000)
-                    delta = datetime.timedelta(microseconds=offset)
-                    expires = epoch_start + delta
-                    expires = expires.timestamp()
+                    expires_nt_time_epoch = min(int(expires_nt_time_epoch), 32536799999000000)
+                    expires = (expires_nt_time_epoch/1000000)-11644473600
 
             value = self._decrypt(item[5], item[6])
             c = create_cookie(host, path, secure, expires, name, value)
