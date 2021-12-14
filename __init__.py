@@ -571,7 +571,8 @@ class Firefox:
     @staticmethod
     def __create_session_cookie(cookie_json):
         expires = str(int(time.time()) + 3600 * 24 * 7)
-        return create_cookie(cookie_json.get('host', ''), cookie_json.get('path', ''), False, expires,
+        return create_cookie(cookie_json.get('host', ''), cookie_json.get('path', ''),
+                             cookie_json.get('secure', False), expires,
                              cookie_json.get('name', ''), cookie_json.get('value', ''))
 
     def __add_session_cookies(self, cj):
