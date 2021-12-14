@@ -4,7 +4,7 @@ This is a python3 fork of [Richard Penman's Browser Cookie](https://github.com/r
 
 * ***What does it do?*** Loads cookies used by your web browser into a cookiejar object.
 * ***Why is it useful?*** This means you can use python to download and get the same content you see in the web browser without needing to login.
-* ***Which browsers are supported?*** Currently Chrome and Firefox.
+* ***Which browsers are supported?*** Currently Chrome, Firefox, Opera, Edge, and Chromium.
 * ***How are the cookies stored?*** In a sqlite database in your home directory.
 
 ## Install ##
@@ -93,6 +93,16 @@ Run `google-chrome-stable --user-data-dir=browser_cookie3 #replace google-chrome
 
 If you want to share a cookie file then visit some site that will generate cookie (without logging in!), example https://www.theverge.com/ will save cookies after you accept the GDPR notice.
 
+### Gnome, Brave (and other Chromium browsers) password storage
+
+If `browser_cookie3` is unable to decrypt cookies, you can start your browser with the `--password-store=gnome-keyring` parameter.  For example:
+
+```sh
+/usr/bin/brave-browser-stable --password-store=gnome-keyring %U
+```
+
+This is confirmed to work with the Brave browser but may also work with other Chromium based browsers as well.
+
 ## Planned backwards incompatible changes for 1.0
 - more sensible cookie file checking order, like first using the default defined in profiles.ini for firefox
 
@@ -101,14 +111,18 @@ So far the following platforms are supported:
 
 * **Chrome:** Linux, OSX, Windows
 * **Firefox:** Linux, OSX, Windows
+* **Opera:** Linux, OSX, Windows
+* **Edge:** Linux, OSX, Windows
+* **Chromium:** Linux, OSX, Windows
+* **Brave** Linux (using Gnome keyring), OSX, Windows
 
-## Testing Dates  ##
+## Testing Dates  (dd/mm/yy) ##
 
-OS      | Chrome | Firefox |
-:------ | :----: | :-----: |
-Mac     | 1/6/16 | 1/6/16  |
-Linux   | 1/6/16 | 1/6/16  |
-Windows | 1/6/16 | n/a     |
+OS      |  Chrome  | Firefox |  Opera  |   Edge   | Chromium | Brave    |
+:------ | :------: | :-----: | :-----: | :------: | :------: | :------: |
+Mac     | 09/12/20 |09/12/20 |09/12/20 | 09/12/20 | 09/12/20 |  |
+Linux   | 09/12/20 |09/12/20 |09/12/20 | 09/12/20 | 09/12/20 | 07/24/21 |
+Windows | 09/12/20 |09/12/20 |09/12/20 | 09/12/20 | 09/12/20 | |
 
 However I only tested on a single version of each browser and so am not sure if the cookie sqlite format changes location or format in earlier/later versions. If you experience a problem please [open an issue](https://github.com/borisbabic/browser_cookie3/issues/new) which includes details of the browser version and operating system. Also patches to support other browsers are very welcome, particularly for Chrome and Internet Explorer on Windows.
 
