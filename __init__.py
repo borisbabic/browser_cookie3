@@ -370,6 +370,7 @@ class Chrome(ChromiumBased):
                 ],
             'windows_cookies':[
                     {'env':'APPDATA', 'path':'..\\Local\\Google\\Chrome\\User Data\\Default\\Cookies'},
+                    {'env':'APPDATA', 'path':'..\\Local\\Google\\Chrome\\User Data\\Default\\Network\\Cookies'},
                     {'env':'LOCALAPPDATA', 'path':'Google\\Chrome\\User Data\\Default\\Cookies'},
                     {'env':'APPDATA', 'path':'Google\\Chrome\\User Data\\Default\\Cookies'}
                 ],
