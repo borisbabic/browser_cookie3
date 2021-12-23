@@ -396,8 +396,11 @@ class Chromium(ChromiumBased):
             'linux_cookies':['~/.config/chromium/Default/Cookies'],
             'windows_cookies':[
                     {'env':'APPDATA', 'path':'..\\Local\\Chromium\\User Data\\Default\\Cookies'},
+                    {'env':'APPDATA', 'path':'..\\Local\\Chromium\\User Data\\Default\\Network\\Cookies'},
                     {'env':'LOCALAPPDATA', 'path':'Chromium\\User Data\\Default\\Cookies'},
-                    {'env':'APPDATA', 'path':'Chromium\\User Data\\Default\\Cookies'}
+                    {'env':'LOCALAPPDATA', 'path':'Chromium\\User Data\\Default\\Network\\Cookies'},
+                    {'env':'APPDATA', 'path':'Chromium\\User Data\\Default\\Cookies'},
+                    {'env':'APPDATA', 'path':'Chromium\\User Data\\Default\\Network\\Cookies'}
             ],
             'osx_cookies': ['~/Library/Application Support/Chromium/Default/Cookies'],
             'windows_keys': [
