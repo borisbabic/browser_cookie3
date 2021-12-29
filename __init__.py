@@ -549,7 +549,11 @@ class Firefox:
             user_data_path = os.path.expanduser(
                 '~/Library/Application Support/Firefox')
         elif sys.platform.startswith('linux'):
-            user_data_path = os.path.expanduser('~/.mozilla/firefox')
+            snap_path = os.path.expanduser('~/snap/firefox/common/.mozilla/firefox')
+            if os.path.isdir(snap_path):
+                user_data_path = snap_path
+            else:
+                user_data_path = os.path.expanduser('~/.mozilla/firefox')
         elif sys.platform == 'win32':
             user_data_path = os.path.join(
                 os.environ.get('APPDATA'), 'Mozilla', 'Firefox')
