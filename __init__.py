@@ -522,7 +522,7 @@ class Firefox:
             return fallback_path
 
         profiles_ini_path = profiles_ini_path[0]
-        config.read(profiles_ini_path)
+        config.read(profiles_ini_path, encoding="utf8")
 
         profile_path = None
         for section in config.sections():
