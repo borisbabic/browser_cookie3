@@ -183,6 +183,9 @@ def text_factory(data):
 
 class ChromiumBased:
     """Super class for all Chromium based browser"""
+
+    UNIX_TO_NT_EPOCH_OFFSET = 11644473600  # seconds from 1601-01-01T00:00:00Z to 1970-01-01T00:00:00Z
+
     def __init__(self, browser:str, cookie_file=None, domain_name="", key_file=None, **kwargs):
         self.salt = b'saltysalt'
         self.iv = b' ' * 16
@@ -277,22 +280,17 @@ class ChromiumBased:
         cj = http.cookiejar.CookieJar()
 
         for item in cur.fetchall():
-            # Chromium-Based browsers use expires_utc field as timestamp in cookie database, expires_utc is using NT time epoch, while http cookiejar is using Unix time epoch.
-            # NT time epoch, aka Win32 time/FILETIME, it starts from 1601-01-01 0:00:00 GMT, the unit is 100-nanosecond.
-            # Unix time epoch, aka UNIX EPOCH/POSIX, it starts from 1970-01-01 0:00:00 GMT, the unit is second.
-            # if this cookie only valid for this session, then expires_utc is 0 in Chromium-Based browsers' cookie database, it should be set None in cookiejar.
+            # Per https://github.com/chromium/chromium/blob/main/base/time/time.h#L5-L7,
+            # Chromium-based browsers store cookies' expiration timestamps as MICROSECONDS elapsed
+            # since the Windows NT epoch (1601-01-01 0:00:00 GMT), or 0 for session cookies.
+            #
+            # http.cookiejar stores cookies' expiration timestamps as SECONDS since the Unix epoch
+            # (1970-01-01 0:00:00 GMT, or None for session cookies.
             host, path, secure, expires_nt_time_epoch, name = item[:5]
             if (expires_nt_time_epoch == 0):
                 expires = None
             else:
-                # ensure dates don't exceed the datetime limit of year 10000
-                try:
-                    expires_nt_time_epoch = min(int(expires_nt_time_epoch), 265000000000000000)
-                    expires = (expires_nt_time_epoch/1000000)-11644473600
-                # Windows 7 has a further constraint
-                except OSError:
-                    expires_nt_time_epoch = min(int(expires_nt_time_epoch), 32536799999000000)
-                    expires = (expires_nt_time_epoch/1000000)-11644473600
+                expires = (expires_nt_time_epoch / 1000000) - self.UNIX_TO_NT_EPOCH_OFFSET
 
             value = self._decrypt(item[5], item[6])
             c = create_cookie(host, path, secure, expires, name, value)
