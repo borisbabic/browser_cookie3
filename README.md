@@ -16,7 +16,7 @@ This is a python3 fork of [Richard Penman's Browser Cookie](https://github.com/r
 pip install browser-cookie3
 ```
 
-## Usage ##
+## Python usage ##
 
 Here is a *dangerous* hack to extract the title from a webpage:
 ```python
@@ -86,6 +86,25 @@ Alternatively if you are only interested in cookies from a specific domain, you 
 >>> get_title(r.content)
 'richardpenman / home &mdash; Bitbucket'
 ```
+
+## Command-line usage
+
+Run `browser-cookie --help` for all options. Brief examples:
+
+```sh
+$ browser-cookie --firefox stackoverflow.com acct
+t=BASE64_STRING_DESCRIBING_YOUR_STACKOVERFLOW_ACCOUNT
+
+$ browser-cookie --json --chrome stackoverflow.com acct
+{"version": 0, "name": "acct", "value": "t=BASE64_STRING_DESCRIBING_YOUR_STACKOVERFLOW_ACCOUNT",
+"port_specified": false, "domain": ".stackoverflow.com", "domain_specified": true,
+"domain_initial_dot": true, "path": "/", "path_specified": true, "secure": 1,
+"expires": 1657049738, "discard": false, "rfc2109": false}
+
+$ browser-cookie nonexistent-domain.com nonexistent-cookie && echo "Cookie found" || echo "No cookie found"
+No cookie found
+```
+
 ## Fresh cookie files
 Creating and testing a fresh cookie file can help eliminate some possible user specific issues. It also allows you to upload a cookie file you are having issues with, since you should never upload your main cookie file!
 ### Chrome and chromium

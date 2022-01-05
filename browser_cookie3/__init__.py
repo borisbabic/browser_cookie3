@@ -410,9 +410,14 @@ class ChromiumBased:
             cur.execute('SELECT host_key, path, secure, expires_utc, name, value, encrypted_value, is_httponly '
                         'FROM cookies WHERE host_key like ?;', ('%{}%'.format(self.domain_name),))
         except sqlite3.OperationalError:
-            # chrome >=56
-            cur.execute('SELECT host_key, path, is_secure, expires_utc, name, value, encrypted_value, is_httponly '
-                        'FROM cookies WHERE host_key like ?;', ('%{}%'.format(self.domain_name),))
+            try:
+                # chrome >=56
+                cur.execute('SELECT host_key, path, is_secure, expires_utc, name, value, encrypted_value, is_httponly '
+                            'FROM cookies WHERE host_key like ?;', ('%{}%'.format(self.domain_name),))
+            except sqlite3.OperationalError as e:
+                if e.args[0].startswith(('no such table: ', 'file is not a database')):
+                    raise BrowserCookieError('File {} is not a Chromium-based browser cookie file'.format(self.cookie_file))
+                raise
 
         cj = http.cookiejar.CookieJar()
 
@@ -882,8 +887,13 @@ class Firefox:
     def load(self):
         con = _sqlite3_connect_readonly(self.cookie_file)
         cur = con.cursor()
-        cur.execute('select host, path, isSecure, expiry, name, value, isHttpOnly from moz_cookies '
-                    'where host like ?', ('%{}%'.format(self.domain_name),))
+        try:
+            cur.execute('select host, path, isSecure, expiry, name, value, isHttpOnly from moz_cookies '
+                        'where host like ?', ('%{}%'.format(self.domain_name),))
+        except sqlite3.DatabaseError as e:
+            if e.args[0].startswith(('no such table: ', 'file is not a database')):
+                raise BrowserCookieError('File {} is not a Firefox cookie file'.format(self.cookie_file))
+            raise
 
         cj = http.cookiejar.CookieJar()
         for item in cur.fetchall():
@@ -1077,11 +1087,12 @@ def vivaldi(cookie_file=None, domain_name="", key_file=None):
     return Vivaldi(cookie_file, domain_name, key_file).load()
 
 
-def firefox(cookie_file=None, domain_name=""):
+def firefox(cookie_file=None, domain_name="", key_file=None):
     """Returns a cookiejar of the cookies and sessions used by Firefox. Optionally
     pass in a domain name to only load cookies from the specified domain
     """
-    return Firefox(cookie_file, domain_name).load()
+    return Firefox(cookie_file, domain_name, key_file).load()
+
 
 def safari(cookie_file=None, domain_name=""):
     """Returns a cookiejar of the cookies and sessions used by Safari. Optionally
@@ -1105,6 +1116,9 @@ def load(domain_name=""):
         except BrowserCookieError:
             pass
     return cj
+
+
+__all__ = ['BrowserCookieError', 'load', 'all_browsers'] + all_browsers
 
 
 def load_logins(domain_name=""):
