@@ -6,18 +6,14 @@ import sys
 import time
 import glob
 import http.cookiejar
+import json
 import tempfile
 import lz4.block
-import datetime
 import configparser
 import base64
 from Crypto.Cipher import AES
 from typing import Union
 
-try:
-    import json
-except ImportError:
-    import simplejson as json
 try:
     # should use pysqlite2 to read the cookies.sqlite on Windows
     # otherwise will raise the "sqlite3.DatabaseError: file is encrypted or is not a database" exception
