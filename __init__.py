@@ -108,7 +108,7 @@ def crypt_unprotect_data(
 
 
 def get_linux_pass(os_crypt_name):
-    """Retrive password used to encrypt cookies from libsecret"""
+    """Retrieve password used to encrypt cookies from libsecret"""
     # https://github.com/n8henrie/pycookiecheat/issues/12
     my_pass = None
 
@@ -182,7 +182,7 @@ def text_factory(data):
         return data
 
 class ChromiumBased:
-    """Super class for all Chromium based browser"""
+    """Super class for all Chromium based browsers"""
 
     UNIX_TO_NT_EPOCH_OFFSET = 11644473600  # seconds from 1601-01-01T00:00:00Z to 1970-01-01T00:00:00Z
 
@@ -201,7 +201,7 @@ class ChromiumBased:
             windows_keys=None, os_crypt_name=None, osx_key_service=None, osx_key_user=None):
 
         if sys.platform == 'darwin':
-            # running Chromium or it's derivatives on OSX
+            # running Chromium or its derivatives on OSX
             my_pass = keyring.get_password(osx_key_service, osx_key_user)
 
             # try default peanuts password, probably won't work
@@ -564,7 +564,7 @@ class Firefox:
         if cookie_files:
             return cookie_files[0]
         else:
-            raise BrowserCookieError('Failed to find Firefox cookie')
+            raise BrowserCookieError('Failed to find Firefox cookie file')
 
     @staticmethod
     def __create_session_cookie(cookie_json):
