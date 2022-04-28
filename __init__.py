@@ -6,18 +6,14 @@ import sys
 import time
 import glob
 import http.cookiejar
+import json
 import tempfile
 import lz4.block
-import datetime
 import configparser
 import base64
 from Crypto.Cipher import AES
 from typing import Union
 
-try:
-    import json
-except ImportError:
-    import simplejson as json
 try:
     # should use pysqlite2 to read the cookies.sqlite on Windows
     # otherwise will raise the "sqlite3.DatabaseError: file is encrypted or is not a database" exception
@@ -108,7 +104,7 @@ def crypt_unprotect_data(
 
 
 def get_linux_pass(os_crypt_name):
-    """Retrive password used to encrypt cookies from libsecret"""
+    """Retrieve password used to encrypt cookies from libsecret"""
     # https://github.com/n8henrie/pycookiecheat/issues/12
     my_pass = None
 
@@ -182,7 +178,10 @@ def text_factory(data):
         return data
 
 class ChromiumBased:
-    """Super class for all Chromium based browser"""
+    """Super class for all Chromium based browsers"""
+
+    UNIX_TO_NT_EPOCH_OFFSET = 11644473600  # seconds from 1601-01-01T00:00:00Z to 1970-01-01T00:00:00Z
+
     def __init__(self, browser:str, cookie_file=None, domain_name="", key_file=None, **kwargs):
         self.salt = b'saltysalt'
         self.iv = b' ' * 16
@@ -198,7 +197,7 @@ class ChromiumBased:
             windows_keys=None, os_crypt_name=None, osx_key_service=None, osx_key_user=None):
 
         if sys.platform == 'darwin':
-            # running Chromium or it's derivatives on OSX
+            # running Chromium or its derivatives on OSX
             my_pass = keyring.get_password(osx_key_service, osx_key_user)
 
             # try default peanuts password, probably won't work
@@ -267,35 +266,30 @@ class ChromiumBased:
         cur = con.cursor()
         try:
             # chrome <=55
-            cur.execute('SELECT host_key, path, secure, expires_utc, name, value, encrypted_value '
+            cur.execute('SELECT host_key, path, secure, expires_utc, name, value, encrypted_value, is_httponly '
                         'FROM cookies WHERE host_key like ?;', ('%{}%'.format(self.domain_name),))
         except sqlite3.OperationalError:
             # chrome >=56
-            cur.execute('SELECT host_key, path, is_secure, expires_utc, name, value, encrypted_value '
+            cur.execute('SELECT host_key, path, is_secure, expires_utc, name, value, encrypted_value, is_httponly '
                         'FROM cookies WHERE host_key like ?;', ('%{}%'.format(self.domain_name),))
 
         cj = http.cookiejar.CookieJar()
 
         for item in cur.fetchall():
-            # Chromium-Based browsers use expires_utc field as timestamp in cookie database, expires_utc is using NT time epoch, while http cookiejar is using Unix time epoch.
-            # NT time epoch, aka Win32 time/FILETIME, it starts from 1601-01-01 0:00:00 GMT, the unit is 100-nanosecond.
-            # Unix time epoch, aka UNIX EPOCH/POSIX, it starts from 1970-01-01 0:00:00 GMT, the unit is second.
-            # if this cookie only valid for this session, then expires_utc is 0 in Chromium-Based browsers' cookie database, it should be set None in cookiejar.
-            host, path, secure, expires_nt_time_epoch, name = item[:5]
+            # Per https://github.com/chromium/chromium/blob/main/base/time/time.h#L5-L7,
+            # Chromium-based browsers store cookies' expiration timestamps as MICROSECONDS elapsed
+            # since the Windows NT epoch (1601-01-01 0:00:00 GMT), or 0 for session cookies.
+            #
+            # http.cookiejar stores cookies' expiration timestamps as SECONDS since the Unix epoch
+            # (1970-01-01 0:00:00 GMT, or None for session cookies.
+            host, path, secure, expires_nt_time_epoch, name, value, enc_value, http_only = item
             if (expires_nt_time_epoch == 0):
                 expires = None
             else:
-                # ensure dates don't exceed the datetime limit of year 10000
-                try:
-                    expires_nt_time_epoch = min(int(expires_nt_time_epoch), 265000000000000000)
-                    expires = (expires_nt_time_epoch/1000000)-11644473600
-                # Windows 7 has a further constraint
-                except OSError:
-                    expires_nt_time_epoch = min(int(expires_nt_time_epoch), 32536799999000000)
-                    expires = (expires_nt_time_epoch/1000000)-11644473600
+                expires = (expires_nt_time_epoch / 1000000) - self.UNIX_TO_NT_EPOCH_OFFSET
 
-            value = self._decrypt(item[5], item[6])
-            c = create_cookie(host, path, secure, expires, name, value)
+            value = self._decrypt(value, enc_value)
+            c = create_cookie(host, path, secure, expires, name, value, http_only)
             cj.set_cookie(c)
         con.close()
         return cj
@@ -566,14 +560,14 @@ class Firefox:
         if cookie_files:
             return cookie_files[0]
         else:
-            raise BrowserCookieError('Failed to find Firefox cookie')
+            raise BrowserCookieError('Failed to find Firefox cookie file')
 
     @staticmethod
     def __create_session_cookie(cookie_json):
-        expires = str(int(time.time()) + 3600 * 24 * 7)
         return create_cookie(cookie_json.get('host', ''), cookie_json.get('path', ''),
-                             cookie_json.get('secure', False), expires,
-                             cookie_json.get('name', ''), cookie_json.get('value', ''))
+                             cookie_json.get('secure', False), None,
+                             cookie_json.get('name', ''), cookie_json.get('value', ''),
+                             cookie_json.get('httponly', False))
 
     def __add_session_cookies(self, cj):
         if not os.path.exists(self.session_file):
@@ -606,12 +600,13 @@ class Firefox:
     def load(self):
         con = sqlite3.connect(self.tmp_cookie_file)
         cur = con.cursor()
-        cur.execute('select host, path, isSecure, expiry, name, value from moz_cookies '
+        cur.execute('select host, path, isSecure, expiry, name, value, isHttpOnly from moz_cookies '
                     'where host like ?', ('%{}%'.format(self.domain_name),))
 
         cj = http.cookiejar.CookieJar()
         for item in cur.fetchall():
-            c = create_cookie(*item)
+            host, path, secure, expires, name, value, http_only = item
+            c = create_cookie(host, path, secure, expires, name, value, http_only)
             cj.set_cookie(c)
         con.close()
 
@@ -621,10 +616,12 @@ class Firefox:
         return cj
 
 
-def create_cookie(host, path, secure, expires, name, value):
+def create_cookie(host, path, secure, expires, name, value, http_only):
     """Shortcut function to create a cookie"""
+    # HTTPOnly flag goes in _rest, if present (see https://github.com/python/cpython/pull/17471/files#r511187060)
     return http.cookiejar.Cookie(0, name, value, None, False, host, host.startswith('.'), host.startswith('.'), path,
-                                 True, secure, expires, False, None, None, {})
+                                 True, secure, expires, False, None, None,
+                                 {'HTTPOnly': ''} if http_only else {})
 
 def chrome(cookie_file=None, domain_name="", key_file=None):
     """Returns a cookiejar of the cookies used by Chrome. Optionally pass in a

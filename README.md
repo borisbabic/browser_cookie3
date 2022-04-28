@@ -4,8 +4,8 @@ This is a python3 fork of [Richard Penman's Browser Cookie](https://github.com/r
 
 * ***What does it do?*** Loads cookies used by your web browser into a cookiejar object.
 * ***Why is it useful?*** This means you can use python to download and get the same content you see in the web browser without needing to login.
-* ***Which browsers are supported?*** Currently Chrome, Firefox, Opera, Edge, and Chromium.
-* ***How are the cookies stored?*** In a sqlite database in your home directory.
+* ***Which browsers are supported?*** Currently Chrome, Firefox, Opera, Edge, Chromium, and Brave.
+* ***How are the cookies stored?*** All currently-supported browsers store cookies in a sqlite database in your home directory.
 
 ## Install ##
 ```
