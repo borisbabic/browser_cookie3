@@ -112,14 +112,14 @@ def get_linux_pass(os_crypt_name):
     connection = secretstorage.dbus_init()
     collection = secretstorage.get_default_collection(connection)
     secret = None
-    
+
     # we should not look for secret with label. Sometimes label can be different. For example,
     # if Steam is installed before Chromium, Opera or Edge, it will show Steam Secret Storage as label.
     # insted we should look with schema and application
     secret = next(collection.search_items(
         {'xdg:schema': 'chrome_libsecret_os_crypt_password_v2',
             'application': os_crypt_name}), None)
-    
+
     if not secret:
         # trying os_crypt_v1
         secret = next(collection.search_items(
@@ -146,7 +146,7 @@ def get_linux_pass(os_crypt_name):
     # try default peanuts password, probably won't work
     if not my_pass:
         my_pass = 'peanuts'.encode('utf-8')
-    
+
     return my_pass
 
 def __expand_win_path(path:Union[dict,str]):
@@ -162,12 +162,12 @@ def expand_paths(paths:list, os_name:str):
 
     if not isinstance(paths, list):
         paths = [paths]
-    
+
     if os_name == 'windows':
         paths = map(__expand_win_path, paths)
     else:
         paths = map(os.path.expanduser, paths)
-    
+
     paths = next(filter(os.path.exists, paths), None)
     return paths
 
@@ -191,8 +191,8 @@ class ChromiumBased:
         self.domain_name = domain_name
         self.key_file = key_file
         self.__add_key_and_cookie_file(**kwargs)
-    
-    def __add_key_and_cookie_file(self, 
+
+    def __add_key_and_cookie_file(self,
             linux_cookies=None, windows_cookies=None, osx_cookies=None,
             windows_keys=None, os_crypt_name=None, osx_key_service=None, osx_key_user=None):
 
@@ -208,16 +208,16 @@ class ChromiumBased:
             iterations = 1003  # number of pbkdf2 iterations on mac
             self.key = PBKDF2(my_pass, self.salt,
                               iterations=iterations).read(self.length)
-            
+
             cookie_file = self.cookie_file or expand_paths(osx_cookies,'osx')
-        
+
         elif sys.platform.startswith('linux'):
             my_pass = get_linux_pass(os_crypt_name)
 
             iterations = 1
             self.key = PBKDF2(my_pass, self.salt,
                               iterations=iterations).read(self.length)
-            
+
             cookie_file = self.cookie_file or expand_paths(linux_cookies, 'linux')
 
         elif sys.platform == "win32":
@@ -233,32 +233,32 @@ class ChromiumBased:
                     _, self.key = crypt_unprotect_data(keydpapi, is_key=True)
 
             # get cookie file from APPDATA
-            
+
             cookie_file = self.cookie_file
-            
+
             if not cookie_file:
                 if self.browser.lower() == 'chrome' and windows_group_policy_path():
                     cookie_file = windows_group_policy_path()
                 else:
                     cookie_file = expand_paths(windows_cookies,'windows')
-        
+
         else:
             raise BrowserCookieError(
                 "OS not recognized. Works on OSX, Windows, and Linux.")
-        
+
         if not cookie_file:
                 raise BrowserCookieError('Failed to find {} cookie'.format(self.browser))
-        
+
         self.tmp_cookie_file = create_local_copy(cookie_file)
 
     def __del__(self):
         # remove temporary backup of sqlite cookie database
         if hasattr(self, 'tmp_cookie_file'):  # if there was an error till here
             os.remove(self.tmp_cookie_file)
-    
+
     def __str__(self):
         return self.browser
-    
+
     def load(self):
         """Load sqlite cookies into a cookiejar"""
         con = sqlite3.connect(self.tmp_cookie_file)
@@ -343,7 +343,7 @@ class ChromiumBased:
 
         cipher = pyaes.Decrypter(
             pyaes.AESModeOfOperationCBC(self.key, self.iv))
-        
+
         # will rise Value Error: invalid padding byte if the key is wrong,
         # probably we did not got the key and used peanuts
         try:
@@ -365,7 +365,10 @@ class Chrome(ChromiumBased):
             'windows_cookies':[
                     {'env':'APPDATA', 'path':'..\\Local\\Google\\Chrome\\User Data\\Default\\Cookies'},
                     {'env':'LOCALAPPDATA', 'path':'Google\\Chrome\\User Data\\Default\\Cookies'},
-                    {'env':'APPDATA', 'path':'Google\\Chrome\\User Data\\Default\\Cookies'}
+                    {'env':'APPDATA', 'path':'Google\\Chrome\\User Data\\Default\\Cookies'},
+                    {'env':'APPDATA', 'path':'..\\Local\\Google\\Chrome\\User Data\\Default\\Network\\Cookies'},
+                    {'env':'LOCALAPPDATA', 'path':'Google\\Chrome\\User Data\\Default\\Network\\Cookies'},
+                    {'env':'APPDATA', 'path':'Google\\Chrome\\User Data\\Default\\Network\\Cookies'}
                 ],
             'osx_cookies': ['~/Library/Application Support/Google/Chrome/Default/Cookies'],
             'windows_keys': [
@@ -388,7 +391,10 @@ class Chromium(ChromiumBased):
             'windows_cookies':[
                     {'env':'APPDATA', 'path':'..\\Local\\Chromium\\User Data\\Default\\Cookies'},
                     {'env':'LOCALAPPDATA', 'path':'Chromium\\User Data\\Default\\Cookies'},
-                    {'env':'APPDATA', 'path':'Chromium\\User Data\\Default\\Cookies'}
+                    {'env':'APPDATA', 'path':'Chromium\\User Data\\Default\\Cookies'},
+                    {'env':'APPDATA', 'path':'..\\Local\\Chromium\\User Data\\Default\\Network\\Cookies'},
+                    {'env':'LOCALAPPDATA', 'path':'Chromium\\User Data\\Default\\Network\\Cookies'},
+                    {'env':'APPDATA', 'path':'Chromium\\User Data\\Default\\Network\\Cookies'}
             ],
             'osx_cookies': ['~/Library/Application Support/Chromium/Default/Cookies'],
             'windows_keys': [
@@ -410,7 +416,10 @@ class Opera(ChromiumBased):
             'windows_cookies':[
                     {'env':'APPDATA', 'path':'..\\Local\\Opera Software\\Opera Stable\\Cookies'},
                     {'env':'LOCALAPPDATA', 'path':'Opera Software\\Opera Stable\\Cookies'},
-                    {'env':'APPDATA', 'path':'Opera Software\\Opera Stable\\Cookies'}
+                    {'env':'APPDATA', 'path':'Opera Software\\Opera Stable\\Cookies'},
+                    {'env':'APPDATA', 'path':'..\\Local\\Opera Software\\Opera Stable\\Network\\Cookies'},
+                    {'env':'LOCALAPPDATA', 'path':'Opera Software\\Opera Stable\\Network\\Cookies'},
+                    {'env':'APPDATA', 'path':'Opera Software\\Opera Stable\\Network\\Cookies'}
             ],
             'osx_cookies': ['~/Library/Application Support/com.operasoftware.Opera/Cookies'],
             'windows_keys': [
@@ -438,7 +447,10 @@ class Brave(ChromiumBased):
                     {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Default\\Cookies'},
                     {'env':'APPDATA', 'path':'..\\Local\\BraveSoftware\\Brave-Browser-Beta\\User Data\\Default\\Cookies'},
                     {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browser-Beta\\User Data\\Default\\Cookies'},
-                    {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser-Beta\\User Data\\Default\\Cookies'}
+                    {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser-Beta\\User Data\\Default\\Cookies'},
+                    {'env':'APPDATA', 'path':'..\\Local\\BraveSoftware\\Brave-Browser\\User Data\\Default\\Network\\Cookies'},
+                    {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Default\\Network\\Cookies'},
+                    {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Default\\Network\\Cookies'},
             ],
             'osx_cookies': [
                     '~/Library/Application Support/BraveSoftware/Brave-Browser/Default/Cookies',
@@ -468,7 +480,10 @@ class Edge(ChromiumBased):
             'windows_cookies':[
                     {'env':'APPDATA', 'path':'..\\Local\\Microsoft\\Edge\\User Data\\Default\\Cookies'},
                     {'env':'LOCALAPPDATA', 'path':'Microsoft\\Edge\\User Data\\Default\\Cookies'},
-                    {'env':'APPDATA', 'path':'Microsoft\\Edge\\User Data\\Default\\Cookies'}
+                    {'env':'APPDATA', 'path':'Microsoft\\Edge\\User Data\\Default\\Cookies'},
+                    {'env':'APPDATA', 'path':'..\\Local\\Microsoft\\Edge\\User Data\\Default\\Network\\Cookies'},
+                    {'env':'LOCALAPPDATA', 'path':'Microsoft\\Edge\\User Data\\Default\\Network\\Cookies'},
+                    {'env':'APPDATA', 'path':'Microsoft\\Edge\\User Data\\Default\\Network\\Cookies'}
             ],
             'osx_cookies': ['~/Library/Application Support/Microsoft Edge/Default/Cookies'],
             'windows_keys': [
