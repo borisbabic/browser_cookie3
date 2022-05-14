@@ -1,8 +1,8 @@
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     name='browser-cookie3',
-    version='0.13.0',
+    version='0.14.1',
     packages=['browser_cookie3'],
     # look for package contents in current directory
     package_dir={'browser_cookie3': '.'},

@@ -1,3 +1,13 @@
+### 0.14.1
+- [Chromium based] Added Chromium v96 cookie paths
+- [MODULE] Replaced deprecated `distutils` with `setuptools`
+### 0.14.0
+- [MODULE] Set HTTPOnly flag for cookies
+- [MODULE] Remove vestigial json-or-simplejson import
+- [DOCS] Update list of supported browsers, fix typos in comments
+- [Chromium based] Unbork Chromium-based cookies’ expiration timestamps
+- [FIREFOX] Unbork Firefox session cookies’ expiration timestamps
+- [FIREFOX] Fix decode error of `profiles.ini`
 ### 0.13.0
 - [BRAVE] Add brave support
 - [CHROME] Fix expires handling
