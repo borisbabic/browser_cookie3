@@ -536,8 +536,8 @@ class Firefox:
         profile_path = None
         for section in config.sections():
             if section.startswith('Install'):
+                # Use that last Install section
                 profile_path = config[section].get('Default')
-                break
             # in ff 72.0.1, if both an Install section and one with Default=1 are present, the former takes precedence
             elif config[section].get('Default') == '1' and not profile_path:
                 profile_path = config[section].get('Path')
