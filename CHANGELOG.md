@@ -1,3 +1,5 @@
+### 0.14.2
+- [Chromium based] Added support for KDE Wallet
 ### 0.14.1
 - [Chromium based] Added Chromium v96 cookie paths
 - [MODULE] Replaced deprecated `distutils` with `setuptools`
