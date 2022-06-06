@@ -3,7 +3,6 @@
 import os
 import os.path
 import sys
-import time
 import glob
 import http.cookiejar
 import json
@@ -103,15 +102,35 @@ def crypt_unprotect_data(
         return description, buffer_out.value
 
 
-def get_linux_pass(os_crypt_name):
+def get_kde_wallet_password(os_crypt_name):
+    """Retrieve password used to encrypt cookies from KDE Wallet"""
+    import dbus
+
+    folder = f'{os_crypt_name.capitalize()} Keys'
+    key = f'{os_crypt_name.capitalize()} Safe Storage'
+    app_id = 'browser-cookie3'
+
+    kwalletd5_object = dbus.SessionBus().get_object('org.kde.kwalletd5', '/modules/kwalletd5', False)
+    kwalletd5 = dbus.Interface(kwalletd5_object, 'org.kde.KWallet')
+    handle = kwalletd5.open(kwalletd5.networkWallet(), dbus.Int64(0), app_id)
+    handle = dbus.Int32(handle)
+    if not kwalletd5.hasFolder(handle, folder, app_id):
+        raise RuntimeError(f'KDE Wallet folder {folder} not found.')
+    password = kwalletd5.readPassword(handle, folder, key, app_id)
+    kwalletd5.close(handle, False, app_id)
+    return password.encode('utf-8')
+
+
+def get_secretstorage_password(os_crypt_name):
     """Retrieve password used to encrypt cookies from libsecret"""
     # https://github.com/n8henrie/pycookiecheat/issues/12
-    my_pass = None
 
     import secretstorage
+    
     connection = secretstorage.dbus_init()
     collection = secretstorage.get_default_collection(connection)
     secret = None
+    my_pass = None
 
     # we should not look for secret with label. Sometimes label can be different. For example,
     # if Steam is installed before Chromium, Opera or Edge, it will show Steam Secret Storage as label.
@@ -130,29 +149,35 @@ def get_linux_pass(os_crypt_name):
         my_pass = secret.get_secret()
 
     connection.close()
+    return my_pass
 
-    # Try to get pass from keyring, which should support KDE / KWallet
-    if not my_pass:
-        try:
-            my_pass = keyring.get_password(
-                "{} Keys".format(os_crypt_name.capitalize()),
-                "{} Safe Storage".format(os_crypt_name.capitalize())
-            ).encode('utf-8')
-        except RuntimeError:
-            pass
-        except AttributeError:
-            pass
+
+def get_linux_pass(os_crypt_name):
+    try:
+        password = get_secretstorage_password(os_crypt_name)
+        if password is not None:
+            return password
+    except KeyboardInterrupt:
+        raise
+    except:
+        pass
+    
+    try:
+        return get_kde_wallet_password(os_crypt_name)
+    except KeyboardInterrupt:
+        raise
+    except:
+        pass
 
     # try default peanuts password, probably won't work
-    if not my_pass:
-        my_pass = 'peanuts'.encode('utf-8')
+    return b'peanuts'
 
-    return my_pass
 
 def __expand_win_path(path:Union[dict,str]):
     if not isinstance(path,dict):
         path = {'path': path}
     return os.path.join(os.getenv(path['env'], ''), path['path'])
+
 
 def expand_paths(paths:list, os_name:str):
     """Expands user paths on Linux, OSX, and windows"""
@@ -171,11 +196,13 @@ def expand_paths(paths:list, os_name:str):
     paths = next(filter(os.path.exists, paths), None)
     return paths
 
+
 def text_factory(data):
     try:
         return data.decode('utf-8')
     except UnicodeDecodeError:
         return data
+
 
 class ChromiumBased:
     """Super class for all Chromium based browsers"""
@@ -354,6 +381,7 @@ class ChromiumBased:
             raise BrowserCookieError('Unable to get key for cookie decryption')
         return decrypted.decode("utf-8")
 
+
 class Chrome(ChromiumBased):
     """Class for Google Chrome"""
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
@@ -383,6 +411,7 @@ class Chrome(ChromiumBased):
 
         super().__init__(browser='Chrome', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
 
+
 class Chromium(ChromiumBased):
     """Class for Chromium"""
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
@@ -407,6 +436,7 @@ class Chromium(ChromiumBased):
             'osx_key_user' : 'Chromium'
         }
         super().__init__(browser='Chromium', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
+
 
 class Opera(ChromiumBased):
     """Class for Opera"""
@@ -433,6 +463,7 @@ class Opera(ChromiumBased):
         }
 
         super().__init__(browser='Opera', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
+
 
 class Brave(ChromiumBased):
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
@@ -469,6 +500,8 @@ class Brave(ChromiumBased):
             'osx_key_user' : 'Brave'
         }
         super().__init__(browser='Brave', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
+
+
 class Edge(ChromiumBased):
     """Class for Microsoft Edge"""
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
@@ -497,6 +530,7 @@ class Edge(ChromiumBased):
         }
 
         super().__init__(browser='Edge', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
+
 
 class Firefox:
     """Class for Firefox"""
@@ -638,11 +672,13 @@ def create_cookie(host, path, secure, expires, name, value, http_only):
                                  True, secure, expires, False, None, None,
                                  {'HTTPOnly': ''} if http_only else {})
 
+
 def chrome(cookie_file=None, domain_name="", key_file=None):
     """Returns a cookiejar of the cookies used by Chrome. Optionally pass in a
     domain name to only load cookies from the specified domain
     """
     return Chrome(cookie_file, domain_name, key_file).load()
+
 
 def chromium(cookie_file=None, domain_name="", key_file=None):
     """Returns a cookiejar of the cookies used by Chromium. Optionally pass in a
@@ -650,11 +686,13 @@ def chromium(cookie_file=None, domain_name="", key_file=None):
     """
     return Chromium(cookie_file, domain_name, key_file).load()
 
+
 def opera(cookie_file=None, domain_name="", key_file=None):
     """Returns a cookiejar of the cookies used by Opera. Optionally pass in a
     domain name to only load cookies from the specified domain
     """
     return Opera(cookie_file, domain_name, key_file).load()
+
 
 def brave(cookie_file=None, domain_name="", key_file=None):
     """Returns a cookiejar of the cookies and sessions used by Brave. Optionally
@@ -662,11 +700,13 @@ def brave(cookie_file=None, domain_name="", key_file=None):
     """
     return Brave(cookie_file, domain_name, key_file).load()
 
+
 def edge(cookie_file=None, domain_name="", key_file=None):
     """Returns a cookiejar of the cookies used by Microsoft Egde. Optionally pass in a
     domain name to only load cookies from the specified domain
     """
     return Edge(cookie_file, domain_name, key_file).load()
+
 
 def firefox(cookie_file=None, domain_name=""):
     """Returns a cookiejar of the cookies and sessions used by Firefox. Optionally
@@ -691,4 +731,3 @@ def load(domain_name=""):
 
 if __name__ == '__main__':
     print(load())
-

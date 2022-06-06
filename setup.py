@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='browser-cookie3',
-    version='0.14.1',
+    version='0.14.2',
     packages=['browser_cookie3'],
     # look for package contents in current directory
     package_dir={'browser_cookie3': '.'},
