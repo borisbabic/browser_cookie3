@@ -126,7 +126,7 @@ def get_secretstorage_password(os_crypt_name):
     # https://github.com/n8henrie/pycookiecheat/issues/12
 
     import secretstorage
-    
+
     connection = secretstorage.dbus_init()
     collection = secretstorage.get_default_collection(connection)
     secret = None
@@ -161,7 +161,7 @@ def get_linux_pass(os_crypt_name):
         raise
     except:
         pass
-    
+
     try:
         return get_kde_wallet_password(os_crypt_name)
     except KeyboardInterrupt:
@@ -242,8 +242,10 @@ class ChromiumBased:
             my_pass = get_linux_pass(os_crypt_name)
 
             iterations = 1
-            self.key = PBKDF2(my_pass, self.salt,
-                              iterations=iterations).read(self.length)
+            self.v10_key = PBKDF2(b'peanuts', self.salt,
+                                  iterations=iterations).read(self.length)
+            self.v11_key = PBKDF2(my_pass, self.salt,
+                                  iterations=iterations).read(self.length)
 
             cookie_file = self.cookie_file or expand_paths(linux_cookies, 'linux')
 
@@ -363,13 +365,16 @@ class ChromiumBased:
         if value or (encrypted_value[:3] not in [b'v11', b'v10']):
             return value
 
-        # Encrypted cookies should be prefixed with 'v10' according to the
-        # Chromium code. Strip it off.
+        # Encrypted cookies should be prefixed with 'v10' or 'v11'.
+        # Choose key based on this prefix.
+        # Reference in chromium code: `OSCryptImpl::DecryptString` in
+        # components/os_crypt/os_crypt_linux.cc
+        key = self.v11_key if encrypted_value[:3] == b'v11' else self.v10_key
         encrypted_value = encrypted_value[3:]
         encrypted_value_half_len = int(len(encrypted_value) / 2)
 
         cipher = pyaes.Decrypter(
-            pyaes.AESModeOfOperationCBC(self.key, self.iv))
+            pyaes.AESModeOfOperationCBC(key, self.iv))
 
         # will rise Value Error: invalid padding byte if the key is wrong,
         # probably we did not got the key and used peanuts
