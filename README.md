@@ -13,18 +13,15 @@ This is a python3 fork of [Richard Penman's Browser Cookie](https://github.com/r
 
 ## Install ##
 ```bash
-#!bash
-
-    pip3 install browser-cookie3
-
+pip3 install browser-cookie3
 ```
-
 
 ## Usage ##
 
 Here is a *dangerous* hack to extract the title from a webpage:
 ```python
 #!python
+
 >>> import re
 >>> get_title = lambda html: re.findall('<title>(.*?)</title>', html, flags=re.DOTALL)[0].strip()
 ```
@@ -32,6 +29,7 @@ Here is a *dangerous* hack to extract the title from a webpage:
 And here is the webpage title when downloaded normally:
 ```python
 #!python
+
 >>> import urllib2
 >>> url = 'https://bitbucket.org/'
 >>> public_html = urllib2.urlopen(url).read()
