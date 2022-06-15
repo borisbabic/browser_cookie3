@@ -1,5 +1,8 @@
+### 0.15.0
+- [MODULE] Added new browser support: Vivaldi
+- [Chromium based] Fix profile path channge for macOS Monterey
 ### 0.14.3
-- [Chromium based] Fix for mixture of `v10` and `v11` cookies on linux 
+- [Chromium based] Fix for mixture of `v10` and `v11` cookies on linux
 ### 0.14.2
 - [Chromium based] Added support for KDE Wallet
 ### 0.14.1
