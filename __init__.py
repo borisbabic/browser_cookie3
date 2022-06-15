@@ -179,7 +179,7 @@ def __expand_win_path(path:Union[dict,str]):
     return os.path.join(os.getenv(path['env'], ''), path['path'])
 
 
-def expand_paths(paths:list, os_name:str):
+def expand_paths_impl(paths:list, os_name:str):
     """Expands user paths on Linux, OSX, and windows"""
 
     os_name = os_name.lower()
@@ -193,8 +193,14 @@ def expand_paths(paths:list, os_name:str):
     else:
         paths = map(os.path.expanduser, paths)
 
-    paths = next(filter(os.path.exists, paths), None)
-    return paths
+    for path in paths:
+        for i in sorted(glob.glob(path)):   # glob will return results in arbitrary order. sorted() is use to make output predictable.
+            yield i                         # can use return here without using `expand_paths()` below.
+                                            # but using generator can be useful if we plan to parse all `Cookies` files later.
+
+
+def expand_paths(paths:list, os_name:str):
+    return next(expand_paths_impl(paths, os_name), None)
 
 
 def text_factory(data):
@@ -394,28 +400,30 @@ class Chrome(ChromiumBased):
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
         args = {
             'linux_cookies':[
-                    '~/.config/google-chrome/Default/Cookies',
-                    '~/.config/google-chrome-beta/Default/Cookies'
-                ],
+                '~/.config/google-chrome/Default/Cookies',
+                '~/.config/google-chrome-beta/Default/Cookies'
+            ],
             'windows_cookies':[
-                    {'env':'APPDATA', 'path':'..\\Local\\Google\\Chrome\\User Data\\Default\\Cookies'},
-                    {'env':'LOCALAPPDATA', 'path':'Google\\Chrome\\User Data\\Default\\Cookies'},
-                    {'env':'APPDATA', 'path':'Google\\Chrome\\User Data\\Default\\Cookies'},
-                    {'env':'APPDATA', 'path':'..\\Local\\Google\\Chrome\\User Data\\Default\\Network\\Cookies'},
-                    {'env':'LOCALAPPDATA', 'path':'Google\\Chrome\\User Data\\Default\\Network\\Cookies'},
-                    {'env':'APPDATA', 'path':'Google\\Chrome\\User Data\\Default\\Network\\Cookies'}
-                ],
-            'osx_cookies': ['~/Library/Application Support/Google/Chrome/Default/Cookies'],
+                {'env':'APPDATA', 'path':'..\\Local\\Google\\Chrome\\User Data\\Default\\Cookies'},
+                {'env':'LOCALAPPDATA', 'path':'Google\\Chrome\\User Data\\Default\\Cookies'},
+                {'env':'APPDATA', 'path':'Google\\Chrome\\User Data\\Default\\Cookies'},
+                {'env':'APPDATA', 'path':'..\\Local\\Google\\Chrome\\User Data\\Default\\Network\\Cookies'},
+                {'env':'LOCALAPPDATA', 'path':'Google\\Chrome\\User Data\\Default\\Network\\Cookies'},
+                {'env':'APPDATA', 'path':'Google\\Chrome\\User Data\\Default\\Network\\Cookies'}
+            ],
+            'osx_cookies': [
+                '~/Library/Application Support/Google/Chrome/Default/Cookies',
+                '~/Library/Application Support/Google/Chrome/Profile */Cookies'
+            ],
             'windows_keys': [
-                    {'env':'APPDATA', 'path':'..\\Local\\Google\\Chrome\\User Data\\Local State'},
-                    {'env':'LOCALAPPDATA', 'path':'Google\\Chrome\\User Data\\Local State'},
-                    {'env':'APPDATA', 'path':'Google\\Chrome\\User Data\\Local State'}
-                ],
+                {'env':'APPDATA', 'path':'..\\Local\\Google\\Chrome\\User Data\\Local State'},
+                {'env':'LOCALAPPDATA', 'path':'Google\\Chrome\\User Data\\Local State'},
+                {'env':'APPDATA', 'path':'Google\\Chrome\\User Data\\Local State'}
+            ],
             'os_crypt_name':'chrome',
             'osx_key_service' : 'Chrome Safe Storage',
             'osx_key_user' : 'Chrome'
         }
-
         super().__init__(browser='Chrome', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
 
 
@@ -425,18 +433,21 @@ class Chromium(ChromiumBased):
         args = {
             'linux_cookies':['~/.config/chromium/Default/Cookies'],
             'windows_cookies':[
-                    {'env':'APPDATA', 'path':'..\\Local\\Chromium\\User Data\\Default\\Cookies'},
-                    {'env':'LOCALAPPDATA', 'path':'Chromium\\User Data\\Default\\Cookies'},
-                    {'env':'APPDATA', 'path':'Chromium\\User Data\\Default\\Cookies'},
-                    {'env':'APPDATA', 'path':'..\\Local\\Chromium\\User Data\\Default\\Network\\Cookies'},
-                    {'env':'LOCALAPPDATA', 'path':'Chromium\\User Data\\Default\\Network\\Cookies'},
-                    {'env':'APPDATA', 'path':'Chromium\\User Data\\Default\\Network\\Cookies'}
+                {'env':'APPDATA', 'path':'..\\Local\\Chromium\\User Data\\Default\\Cookies'},
+                {'env':'LOCALAPPDATA', 'path':'Chromium\\User Data\\Default\\Cookies'},
+                {'env':'APPDATA', 'path':'Chromium\\User Data\\Default\\Cookies'},
+                {'env':'APPDATA', 'path':'..\\Local\\Chromium\\User Data\\Default\\Network\\Cookies'},
+                {'env':'LOCALAPPDATA', 'path':'Chromium\\User Data\\Default\\Network\\Cookies'},
+                {'env':'APPDATA', 'path':'Chromium\\User Data\\Default\\Network\\Cookies'}
             ],
-            'osx_cookies': ['~/Library/Application Support/Chromium/Default/Cookies'],
+            'osx_cookies': [
+                '~/Library/Application Support/Chromium/Default/Cookies',
+                '~/Library/Application Support/Chromium/Profile */Cookies',
+            ],
             'windows_keys': [
-                    {'env':'APPDATA', 'path':'..\\Local\\Chromium\\User Data\\Local State'},
-                    {'env':'LOCALAPPDATA', 'path':'Chromium\\User Data\\Local State'},
-                    {'env':'APPDATA', 'path':'Chromium\\User Data\\Local State'}
+                {'env':'APPDATA', 'path':'..\\Local\\Chromium\\User Data\\Local State'},
+                {'env':'LOCALAPPDATA', 'path':'Chromium\\User Data\\Local State'},
+                {'env':'APPDATA', 'path':'Chromium\\User Data\\Local State'}
             ],
             'os_crypt_name':'chromium',
             'osx_key_service' : 'Chromium Safe Storage',
@@ -451,24 +462,23 @@ class Opera(ChromiumBased):
         args = {
             'linux_cookies': ['~/.config/opera/Cookies'],
             'windows_cookies':[
-                    {'env':'APPDATA', 'path':'..\\Local\\Opera Software\\Opera Stable\\Cookies'},
-                    {'env':'LOCALAPPDATA', 'path':'Opera Software\\Opera Stable\\Cookies'},
-                    {'env':'APPDATA', 'path':'Opera Software\\Opera Stable\\Cookies'},
-                    {'env':'APPDATA', 'path':'..\\Local\\Opera Software\\Opera Stable\\Network\\Cookies'},
-                    {'env':'LOCALAPPDATA', 'path':'Opera Software\\Opera Stable\\Network\\Cookies'},
-                    {'env':'APPDATA', 'path':'Opera Software\\Opera Stable\\Network\\Cookies'}
+                {'env':'APPDATA', 'path':'..\\Local\\Opera Software\\Opera Stable\\Cookies'},
+                {'env':'LOCALAPPDATA', 'path':'Opera Software\\Opera Stable\\Cookies'},
+                {'env':'APPDATA', 'path':'Opera Software\\Opera Stable\\Cookies'},
+                {'env':'APPDATA', 'path':'..\\Local\\Opera Software\\Opera Stable\\Network\\Cookies'},
+                {'env':'LOCALAPPDATA', 'path':'Opera Software\\Opera Stable\\Network\\Cookies'},
+                {'env':'APPDATA', 'path':'Opera Software\\Opera Stable\\Network\\Cookies'}
             ],
             'osx_cookies': ['~/Library/Application Support/com.operasoftware.Opera/Cookies'],
             'windows_keys': [
-                    {'env':'APPDATA', 'path':'..\\Local\\Opera Software\\Opera Stable\\Local State'},
-                    {'env':'LOCALAPPDATA', 'path':'Opera Software\\Opera Stable\\Local State'},
-                    {'env':'APPDATA', 'path':'Opera Software\\Opera Stable\\Local State'}
+                {'env':'APPDATA', 'path':'..\\Local\\Opera Software\\Opera Stable\\Local State'},
+                {'env':'LOCALAPPDATA', 'path':'Opera Software\\Opera Stable\\Local State'},
+                {'env':'APPDATA', 'path':'Opera Software\\Opera Stable\\Local State'}
             ],
             'os_crypt_name':'chromium',
             'osx_key_service' : 'Opera Safe Storage',
             'osx_key_user' : 'Opera'
         }
-
         super().__init__(browser='Opera', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
 
 
@@ -476,31 +486,33 @@ class Brave(ChromiumBased):
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
         args = {
             'linux_cookies':[
-                    '~/.config/BraveSoftware/Brave-Browser/Default/Cookies',
-                    '~/.config/BraveSoftware/Brave-Browser-Beta/Default/Cookies'
+                '~/.config/BraveSoftware/Brave-Browser/Default/Cookies',
+                '~/.config/BraveSoftware/Brave-Browser-Beta/Default/Cookies'
             ],
             'windows_cookies':[
-                    {'env':'APPDATA', 'path':'..\\Local\\BraveSoftware\\Brave-Browser\\User Data\\Default\\Cookies'},
-                    {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Default\\Cookies'},
-                    {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Default\\Cookies'},
-                    {'env':'APPDATA', 'path':'..\\Local\\BraveSoftware\\Brave-Browser-Beta\\User Data\\Default\\Cookies'},
-                    {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browser-Beta\\User Data\\Default\\Cookies'},
-                    {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser-Beta\\User Data\\Default\\Cookies'},
-                    {'env':'APPDATA', 'path':'..\\Local\\BraveSoftware\\Brave-Browser\\User Data\\Default\\Network\\Cookies'},
-                    {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Default\\Network\\Cookies'},
-                    {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Default\\Network\\Cookies'},
+                {'env':'APPDATA', 'path':'..\\Local\\BraveSoftware\\Brave-Browser\\User Data\\Default\\Cookies'},
+                {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Default\\Cookies'},
+                {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Default\\Cookies'},
+                {'env':'APPDATA', 'path':'..\\Local\\BraveSoftware\\Brave-Browser-Beta\\User Data\\Default\\Cookies'},
+                {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browser-Beta\\User Data\\Default\\Cookies'},
+                {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser-Beta\\User Data\\Default\\Cookies'},
+                {'env':'APPDATA', 'path':'..\\Local\\BraveSoftware\\Brave-Browser\\User Data\\Default\\Network\\Cookies'},
+                {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Default\\Network\\Cookies'},
+                {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Default\\Network\\Cookies'},
             ],
             'osx_cookies': [
-                    '~/Library/Application Support/BraveSoftware/Brave-Browser/Default/Cookies',
-                    '~/Library/Application Support/BraveSoftware/Brave-Browser-Beta/Default/Cookies'
+                '~/Library/Application Support/BraveSoftware/Brave-Browser/Default/Cookies',
+                '~/Library/Application Support/BraveSoftware/Brave-Browser-Beta/Default/Cookies',
+                '~/Library/Application Support/BraveSoftware/Brave-Browser/Profile */Cookies',
+                '~/Library/Application Support/BraveSoftware/Brave-Browser-Beta/Profile */Cookies'
             ],
             'windows_keys': [
-                    {'env':'APPDATA', 'path':'..\\Local\\BraveSoftware\\Brave-Browser\\User Data\\Local State'},
-                    {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Local State'},
-                    {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Local State'},
-                    {'env':'APPDATA', 'path':'..\\Local\\BraveSoftware\\Brave-Browser-Beta\\User Data\\Local State'},
-                    {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browse-Betar\\User Data\\Local State'},
-                    {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser-Beta\\User Data\\Local State'}
+                {'env':'APPDATA', 'path':'..\\Local\\BraveSoftware\\Brave-Browser\\User Data\\Local State'},
+                {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Local State'},
+                {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Local State'},
+                {'env':'APPDATA', 'path':'..\\Local\\BraveSoftware\\Brave-Browser-Beta\\User Data\\Local State'},
+                {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browse-Betar\\User Data\\Local State'},
+                {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser-Beta\\User Data\\Local State'}
             ],
             'os_crypt_name':'brave',
             'osx_key_service' : 'Brave Safe Storage',
@@ -518,25 +530,58 @@ class Edge(ChromiumBased):
                 '~/.config/microsoft-edge-dev/Default/Cookies'
             ],
             'windows_cookies':[
-                    {'env':'APPDATA', 'path':'..\\Local\\Microsoft\\Edge\\User Data\\Default\\Cookies'},
-                    {'env':'LOCALAPPDATA', 'path':'Microsoft\\Edge\\User Data\\Default\\Cookies'},
-                    {'env':'APPDATA', 'path':'Microsoft\\Edge\\User Data\\Default\\Cookies'},
-                    {'env':'APPDATA', 'path':'..\\Local\\Microsoft\\Edge\\User Data\\Default\\Network\\Cookies'},
-                    {'env':'LOCALAPPDATA', 'path':'Microsoft\\Edge\\User Data\\Default\\Network\\Cookies'},
-                    {'env':'APPDATA', 'path':'Microsoft\\Edge\\User Data\\Default\\Network\\Cookies'}
+                {'env':'APPDATA', 'path':'..\\Local\\Microsoft\\Edge\\User Data\\Default\\Cookies'},
+                {'env':'LOCALAPPDATA', 'path':'Microsoft\\Edge\\User Data\\Default\\Cookies'},
+                {'env':'APPDATA', 'path':'Microsoft\\Edge\\User Data\\Default\\Cookies'},
+                {'env':'APPDATA', 'path':'..\\Local\\Microsoft\\Edge\\User Data\\Default\\Network\\Cookies'},
+                {'env':'LOCALAPPDATA', 'path':'Microsoft\\Edge\\User Data\\Default\\Network\\Cookies'},
+                {'env':'APPDATA', 'path':'Microsoft\\Edge\\User Data\\Default\\Network\\Cookies'}
             ],
-            'osx_cookies': ['~/Library/Application Support/Microsoft Edge/Default/Cookies'],
+            'osx_cookies': [
+                '~/Library/Application Support/Microsoft Edge/Default/Cookies',
+                '~/Library/Application Support/Microsoft Edge/Profile */Cookies'
+            ],
             'windows_keys': [
-                    {'env':'APPDATA', 'path':'..\\Local\\Microsoft\\Edge\\User Data\\Local State'},
-                    {'env':'LOCALAPPDATA', 'path':'Microsoft\\Edge\\User Data\\Local State'},
-                    {'env':'APPDATA', 'path':'Microsoft\\Edge\\User Data\\Local State'}
+                {'env':'APPDATA', 'path':'..\\Local\\Microsoft\\Edge\\User Data\\Local State'},
+                {'env':'LOCALAPPDATA', 'path':'Microsoft\\Edge\\User Data\\Local State'},
+                {'env':'APPDATA', 'path':'Microsoft\\Edge\\User Data\\Local State'}
             ],
             'os_crypt_name':'chromium',
             'osx_key_service' : 'Microsoft Edge Safe Storage',
             'osx_key_user' : 'Microsoft Edge'
         }
-
         super().__init__(browser='Edge', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
+
+
+class Vivaldi(ChromiumBased):
+    """Class for Vivaldi Browser"""
+    def __init__(self, cookie_file=None, domain_name="", key_file=None):
+        args = {
+            'linux_cookies': [
+                '~/.config/vivaldi/Default/Cookies'
+            ],
+            'windows_cookies':[
+                {'env':'APPDATA', 'path':'..\\Local\\Vivaldi\\User Data\\Default\\Cookies'},
+                {'env':'LOCALAPPDATA', 'path':'Vivaldi\\User Data\\Default\\Cookies'},
+                {'env':'APPDATA', 'path':'Vivaldi\\User Data\\Default\\Cookies'},
+                {'env':'APPDATA', 'path':'..\\Local\\Vivaldi\\User Data\\Default\\Network\\Cookies'},
+                {'env':'LOCALAPPDATA', 'path':'Vivaldi\\User Data\\Default\\Network\\Cookies'},
+                {'env':'APPDATA', 'path':'Vivaldi\\User Data\\Default\\Network\\Cookies'}
+            ],
+            'osx_cookies': [
+                '~/Library/Application Support/Vivaldi/Default/Cookies',
+                '~/Library/Application Support/Vivaldi/Profile */Cookies'
+            ],
+            'windows_keys': [
+                {'env':'APPDATA', 'path':'..\\Local\\Vivaldi\\User Data\\Local State'},
+                {'env':'LOCALAPPDATA', 'path':'Vivaldi\\User Data\\Local State'},
+                {'env':'APPDATA', 'path':'Vivaldi\\User Data\\Local State'}
+            ],
+            'os_crypt_name':'chrome',
+            'osx_key_service' : 'Vivaldi Safe Storage',
+            'osx_key_user' : 'Vivaldi'
+        }
+        super().__init__(browser='Vivaldi', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
 
 
 class Firefox:
@@ -715,6 +760,13 @@ def edge(cookie_file=None, domain_name="", key_file=None):
     return Edge(cookie_file, domain_name, key_file).load()
 
 
+def vivaldi(cookie_file=None, domain_name="", key_file=None):
+    """Returns a cookiejar of the cookies used by Vivaldi Browser. Optionally pass in a
+    domain name to only load cookies from the specified domain
+    """
+    return Vivaldi(cookie_file, domain_name, key_file).load()
+
+
 def firefox(cookie_file=None, domain_name=""):
     """Returns a cookiejar of the cookies and sessions used by Firefox. Optionally
     pass in a domain name to only load cookies from the specified domain
@@ -727,7 +779,7 @@ def load(domain_name=""):
     Optionally pass in a domain name to only load cookies from the specified domain
     """
     cj = http.cookiejar.CookieJar()
-    for cookie_fn in [chrome, chromium, opera, brave, edge, firefox]:
+    for cookie_fn in [chrome, chromium, opera, brave, edge, vivaldi, firefox]:
         try:
             for cookie in cookie_fn(domain_name=domain_name):
                 cj.set_cookie(cookie)
