@@ -1,14 +1,18 @@
+[![PyPi Downloads][PyPi-downloads]][PyPi-url]
+[![PyPi Version][PyPi-version]][PyPi-url]
+[![License][License-shield]][License-url]
+
 This is a python3 fork of [Richard Penman's Browser Cookie](https://github.com/richardpenman/browsercookie)
 
 # Browser Cookie #
 
 * ***What does it do?*** Loads cookies used by your web browser into a cookiejar object.
 * ***Why is it useful?*** This means you can use python to download and get the same content you see in the web browser without needing to login.
-* ***Which browsers are supported?*** Currently Chrome, Firefox, Opera, Edge, Chromium, and Brave.
+* ***Which browsers are supported?*** Currently Chrome, Firefox, Opera, Edge, Chromium, Brave, and Vivaldi.
 * ***How are the cookies stored?*** All currently-supported browsers store cookies in a sqlite database in your home directory.
 
 ## Install ##
-```
+```bash
 #!bash
 
     pip3 install browser-cookie3
@@ -19,14 +23,14 @@ This is a python3 fork of [Richard Penman's Browser Cookie](https://github.com/r
 ## Usage ##
 
 Here is a *dangerous* hack to extract the title from a webpage:
-```
+```python
 #!python
 >>> import re
 >>> get_title = lambda html: re.findall('<title>(.*?)</title>', html, flags=re.DOTALL)[0].strip()
 ```
 
 And here is the webpage title when downloaded normally:
-```
+```python
 #!python
 >>> import urllib2
 >>> url = 'https://bitbucket.org/'
@@ -36,7 +40,7 @@ And here is the webpage title when downloaded normally:
 ```
 
 Now let's try with browser_cookie3 - make sure you are logged into Bitbucket in Firefox before trying this example:
-```
+```python
 #!python
 
 >>> import browser_cookie3
@@ -50,7 +54,7 @@ Now let's try with browser_cookie3 - make sure you are logged into Bitbucket in 
 You should see your own username here, meaning the module successfully loaded the cookies from Firefox.
 
 Here is an alternative example with [requests](http://docs.python-requests.org/en/latest/), this time loading the Chrome cookies. Again make sure you are logged into Bitbucket in Chrome before running this:
-```
+```python
 #!python
 
 >>> import browser_cookie3
@@ -62,7 +66,7 @@ Here is an alternative example with [requests](http://docs.python-requests.org/e
 ```
 
 Alternatively if you don't know/care which browser has the cookies you want then all available browser cookies can be loaded:
-```
+```python
 #!python
 
 >>> import browser_cookie3
@@ -74,7 +78,7 @@ Alternatively if you don't know/care which browser has the cookies you want then
 ```
 
 Alternatively if you are only interested in cookies from a specific domain, you can specify a domain filter.
-```
+```python
 #!python
 
 >>> import browser_cookie3
@@ -93,16 +97,6 @@ Run `google-chrome-stable --user-data-dir=browser_cookie3 #replace google-chrome
 
 If you want to share a cookie file then visit some site that will generate cookie (without logging in!), example https://www.theverge.com/ will save cookies after you accept the GDPR notice.
 
-### Gnome, Brave (and other Chromium browsers) password storage
-
-If `browser_cookie3` is unable to decrypt cookies, you can start your browser with the `--password-store=gnome-keyring` parameter.  For example:
-
-```sh
-/usr/bin/brave-browser-stable --password-store=gnome-keyring %U
-```
-
-This is confirmed to work with the Brave browser but may also work with other Chromium based browsers as well.
-
 ## Planned backwards incompatible changes for 1.0
 - more sensible cookie file checking order, like first using the default defined in profiles.ini for firefox
 
@@ -114,17 +108,24 @@ So far the following platforms are supported:
 * **Opera:** Linux, OSX, Windows
 * **Edge:** Linux, OSX, Windows
 * **Chromium:** Linux, OSX, Windows
-* **Brave** Linux (using Gnome keyring), OSX, Windows
+* **Brave** Linux, OSX, Windows
+* **Vivaldi** Linux, OSX, Windows
 
 ## Testing Dates  (dd/mm/yy) ##
 
-OS      |  Chrome  | Firefox |  Opera  |   Edge   | Chromium | Brave    |
-:------ | :------: | :-----: | :-----: | :------: | :------: | :------: |
-Mac     | 09/12/20 |09/12/20 |09/12/20 | 09/12/20 | 09/12/20 |  |
-Linux   | 09/12/20 |09/12/20 |09/12/20 | 09/12/20 | 09/12/20 | 07/24/21 |
-Windows | 09/12/20 |09/12/20 |09/12/20 | 09/12/20 | 09/12/20 | |
+OS      |  Chrome  | Firefox  |  Opera   |   Edge   | Chromium |  Brave   | Vivaldi  |
+:------ | :------: | :-----:  | :-----:  | :------: | :------: | :------: | :------: |
+Mac     | 09/12/20 | 09/12/20 | 09/12/20 | 09/12/20 | 09/12/20 | 15/06/22 | 15/06/22 |
+Linux   | 09/12/20 | 09/12/20 | 09/12/20 | 09/12/20 | 09/12/20 | 07/24/21 | 15/06/22 |
+Windows | 09/12/20 | 09/12/20 | 09/12/20 | 09/12/20 | 09/12/20 | 15/06/22 | 15/06/22 |
 
 However I only tested on a single version of each browser and so am not sure if the cookie sqlite format changes location or format in earlier/later versions. If you experience a problem please [open an issue](https://github.com/borisbabic/browser_cookie3/issues/new) which includes details of the browser version and operating system. Also patches to support other browsers are very welcome, particularly for Chrome and Internet Explorer on Windows.
 
 ## Acknowledgements ##
 Special thanks to Nathan Henrie for his example of [how to decode the Chrome cookies](http://n8henrie.com/2013/11/use-chromes-cookies-for-easier-downloading-with-python-requests/).
+
+[PyPi-downloads]: https://img.shields.io/pypi/dm/browser-cookie3
+[PyPi-url]: https://pypi.org/project/browser-cookie3/
+[License-shield]: https://img.shields.io/github/license/borisbabic/browser_cookie3?color=00aaaa
+[License-url]: https://github.com/borisbabic/browser_cookie3/blob/master/LICENSE
+[PyPi-version]: https://img.shields.io/pypi/v/browser-cookie3?color=00aa00
