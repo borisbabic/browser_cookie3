@@ -539,6 +539,35 @@ class Edge(ChromiumBased):
         super().__init__(browser='Edge', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
 
 
+class Vivaldi(ChromiumBased):
+    """Class for Vivaldi Browser"""
+    def __init__(self, cookie_file=None, domain_name="", key_file=None):
+        args = {
+            'linux_cookies': [
+                '~/.config/vivaldi/Default/Cookies'
+            ],
+            'windows_cookies':[
+                    {'env':'APPDATA', 'path':'..\\Local\\Vivaldi\\User Data\\Default\\Cookies'},
+                    {'env':'LOCALAPPDATA', 'path':'Vivaldi\\User Data\\Default\\Cookies'},
+                    {'env':'APPDATA', 'path':'Vivaldi\\User Data\\Default\\Cookies'},
+                    {'env':'APPDATA', 'path':'..\\Local\\Vivaldi\\User Data\\Default\\Network\\Cookies'},
+                    {'env':'LOCALAPPDATA', 'path':'Vivaldi\\User Data\\Default\\Network\\Cookies'},
+                    {'env':'APPDATA', 'path':'Vivaldi\\User Data\\Default\\Network\\Cookies'}
+            ],
+            'osx_cookies': ['~/Library/Application Support/Vivaldi/Default/Cookies'],
+            'windows_keys': [
+                    {'env':'APPDATA', 'path':'..\\Local\\Vivaldi\\User Data\\Local State'},
+                    {'env':'LOCALAPPDATA', 'path':'Vivaldi\\User Data\\Local State'},
+                    {'env':'APPDATA', 'path':'Vivaldi\\User Data\\Local State'}
+            ],
+            'os_crypt_name':'chrome',
+            'osx_key_service' : 'Vivaldi Safe Storage',
+            'osx_key_user' : 'Vivaldi'
+        }
+
+        super().__init__(browser='Vivaldi', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
+
+
 class Firefox:
     """Class for Firefox"""
     def __init__(self, cookie_file=None, domain_name=""):
@@ -715,6 +744,13 @@ def edge(cookie_file=None, domain_name="", key_file=None):
     return Edge(cookie_file, domain_name, key_file).load()
 
 
+def vivaldi(cookie_file=None, domain_name="", key_file=None):
+    """Returns a cookiejar of the cookies used by Vivaldi Browser. Optionally pass in a
+    domain name to only load cookies from the specified domain
+    """
+    return Vivaldi(cookie_file, domain_name, key_file).load()
+
+
 def firefox(cookie_file=None, domain_name=""):
     """Returns a cookiejar of the cookies and sessions used by Firefox. Optionally
     pass in a domain name to only load cookies from the specified domain
@@ -727,7 +763,7 @@ def load(domain_name=""):
     Optionally pass in a domain name to only load cookies from the specified domain
     """
     cj = http.cookiejar.CookieJar()
-    for cookie_fn in [chrome, chromium, opera, brave, edge, firefox]:
+    for cookie_fn in [chrome, chromium, opera, brave, edge, vivaldi, firefox]:
         try:
             for cookie in cookie_fn(domain_name=domain_name):
                 cj.set_cookie(cookie)
