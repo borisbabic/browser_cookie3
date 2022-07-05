@@ -1,3 +1,5 @@
+### 0.16.0
+- [MODULE] Added new browser support: Safari
 ### 0.15.0
 - [MODULE] Added new browser support: Vivaldi
 - [Chromium based] Fix profile path channge for macOS Monterey
