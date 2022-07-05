@@ -2,6 +2,7 @@
 
 import os
 import os.path
+import struct
 import sys
 import glob
 import http.cookiejar
@@ -10,6 +11,7 @@ import tempfile
 import lz4.block
 import configparser
 import base64
+from io import BytesIO
 from Crypto.Cipher import AES
 from typing import Union
 
@@ -717,6 +719,107 @@ class Firefox:
         return cj
 
 
+class Safari:
+    """Class for Safari"""
+
+    APPLE_TO_UNIX_TIME = 978307200
+    NEW_ISSUE_MESSAGE = 'Page format changed.\nPlease create a new issue on: https://github.com/borisbabic/browser_cookie3/issues/new'
+
+    def __init__(self, cookie_file=None, domain_name="") -> None:
+        self.__offset = 0
+        self.__domain_name = domain_name
+        self.__buffer = None
+        self.__open_file(cookie_file)
+        self.__parse_header()
+
+    def __del__(self):
+        if self.__buffer:
+            self.__buffer.close()
+    
+    def __open_file(self, cookie_file):
+        if cookie_file is None:
+            cookie_file = os.path.expanduser('~/Library/Cookies/Cookies.binarycookies')
+        if not os.path.exists(cookie_file):
+            raise BrowserCookieError('Can not find Safari cookie file')
+        self.__buffer = open(cookie_file, 'rb')
+    
+    def __read_file(self, size:int, offset:int=None):
+        if offset is not None:
+            self.__offset = offset
+        self.__buffer.seek(self.__offset)
+        self.__offset += size
+        return BytesIO(self.__buffer.read(size))
+
+    def __parse_header(self):
+        assert self.__buffer.read(4) == b'cook', 'Not a safari cookie file'
+        self.__total_page = struct.unpack('>I', self.__buffer.read(4))[0]
+        
+        self.__page_sizes = []
+        for _ in range(self.__total_page):
+            self.__page_sizes.append(struct.unpack('>I', self.__buffer.read(4))[0])
+
+    @staticmethod
+    def __read_until_null(file:BytesIO, decode:bool=True):
+        data = []
+        while True:
+            byte = file.read(1)
+            if byte == b'\x00':
+                break
+            data.append(byte)
+        data = b''.join(data)
+        if decode:
+            data = data.decode('utf-8')
+        return data
+
+    def __parse_cookie(self, page:BytesIO, cookie_offset:int):
+        page.seek(cookie_offset)
+        cookie_size = struct.unpack('<Q', page.read(8))[0]
+        flags = struct.unpack('<Q', page.read(8))[0]
+        is_secure = bool(flags & 0x1)
+        is_httponly = bool(flags & 0x4)
+        
+        host_offset = struct.unpack('<I', page.read(4))[0]
+        name_offset = struct.unpack('<I', page.read(4))[0]
+        path_offset = struct.unpack('<I', page.read(4))[0]
+        value_offset = struct.unpack('<I', page.read(4))[0]
+
+        assert page.read(8) == b'\x00' * 8, self.NEW_ISSUE_MESSAGE
+        expiry_date = int(struct.unpack('<d', page.read(8))[0] + self.APPLE_TO_UNIX_TIME) # convert to unix time
+        access_time = int(struct.unpack('<d', page.read(8))[0] + self.APPLE_TO_UNIX_TIME) # convert to unix time
+        
+        name = self.__read_until_null(page)
+        value = self.__read_until_null(page)
+        host = self.__read_until_null(page)
+        path = self.__read_until_null(page)
+
+        return create_cookie(host, path, is_secure, expiry_date, name, value, is_httponly)
+
+    def __domain_filter(self, cookie: http.cookiejar.Cookie):
+        if not self.__domain_name:
+            return True
+        return self.__domain_name in cookie.domain
+
+    def __parse_page(self, page_index:int):
+        offset = 8 + self.__total_page * 4 + sum(self.__page_sizes[:page_index])
+        page = self.__read_file(self.__page_sizes[page_index], offset)
+        assert page.read(4) == b'\x00\x00\x01\x00', self.NEW_ISSUE_MESSAGE
+        n_cookies = struct.unpack('<I', page.read(4))[0]
+        cookie_offsets = []
+        for _ in range(n_cookies):
+            cookie_offsets.append(struct.unpack('<I', page.read(4))[0])
+        assert page.read(4) == b'\x00\x00\x00\x00', self.NEW_ISSUE_MESSAGE
+        
+        for offset in cookie_offsets:
+            yield self.__parse_cookie(page, offset)
+    
+    def load(self):
+        cj = http.cookiejar.CookieJar()
+        for i in range(self.__total_page):
+            for cookie in self.__parse_page(i):
+                if self.__domain_filter(cookie):
+                    cj.set_cookie(cookie)
+        return cj
+
 def create_cookie(host, path, secure, expires, name, value, http_only):
     """Shortcut function to create a cookie"""
     # HTTPOnly flag goes in _rest, if present (see https://github.com/python/cpython/pull/17471/files#r511187060)
@@ -773,6 +876,11 @@ def firefox(cookie_file=None, domain_name=""):
     """
     return Firefox(cookie_file, domain_name).load()
 
+def safari(cookie_file=None, domain_name=""):
+    """Returns a cookiejar of the cookies and sessions used by Safari. Optionally
+    pass in a domain name to only load cookies from the specified domain
+    """
+    return Safari(cookie_file, domain_name).load()
 
 def load(domain_name=""):
     """Try to load cookies from all supported browsers and return combined cookiejar
