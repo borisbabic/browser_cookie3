@@ -2,7 +2,9 @@
 [![PyPi Version][PyPi-version]][PyPi-url]
 [![License][License-shield]][License-url]
 
-This is a python3 fork of [Richard Penman's Browser Cookie](https://github.com/richardpenman/browsercookie)
+<strike>This is a python3 fork of [Richard Penman's Browser Cookie](https://github.com/richardpenman/browsercookie)</strike>
+This is a fork of a fork to (hopefully) add BSD support  
+Currently in development, no BSD support (yet).
 
 # Browser Cookie #
 
