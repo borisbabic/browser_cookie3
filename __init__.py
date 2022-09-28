@@ -657,6 +657,12 @@ class Firefox:
             # legacy firefox <68 fallback
             cookie_files = glob.glob(os.path.join(os.environ.get('PROGRAMFILES'), 'Mozilla Firefox', 'profile', 'cookies.sqlite')) \
                 or glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)'), 'Mozilla Firefox', 'profile', 'cookies.sqlite'))
+        elif sys.platform.startswith('openbsd'):
+            general_path = os.path.expanduser('~/.mozilla/firefox')
+            if os.path.isdir(general_path):
+                user_data_path = general_path
+            else:
+                user_data_path = os.path.expanduser('~/snap/firefox/common/.mozilla/firefox')
         else:
             raise BrowserCookieError(
                 'Unsupported operating system: ' + sys.platform)
