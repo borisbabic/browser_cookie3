@@ -3,8 +3,8 @@
 [![License][License-shield]][License-url]
 
 <strike>This is a python3 fork of [Richard Penman's Browser Cookie](https://github.com/richardpenman/browsercookie)</strike>  
-This is a fork of a fork to (hopefully) add BSD support  
-Currently in development, no BSD support (yet).
+This is a fork of a fork to add BSD support  
+Currently only works on Firefox. Support for Chromium seems complicated, will work on it later.
 
 # Browser Cookie #
 
