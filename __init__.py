@@ -228,7 +228,7 @@ class ChromiumBased:
         self.__add_key_and_cookie_file(**kwargs)
 
     def __add_key_and_cookie_file(self,
-            linux_cookies=None, windows_cookies=None, osx_cookies=None,
+            linux_cookies=None, windows_cookies=None, openbsd_cookies=None, osx_cookies=None,
             windows_keys=None, os_crypt_name=None, osx_key_service=None, osx_key_user=None):
 
         if sys.platform == 'darwin':
@@ -256,6 +256,18 @@ class ChromiumBased:
                                   iterations=iterations).read(self.length)
 
             cookie_file = self.cookie_file or expand_paths(linux_cookies, 'linux')
+
+        elif sys.platform.startswith('openbsd'):
+            iterations = 1
+
+            self.v10_key = PBKDF2(b'peanuts', self.salt,
+                                  iterations=iterations).read(self.length)
+            # AFAIK, the OpenBSD port's Chromium does not use v11
+            # my_pass = b'peanuts'
+            # self.v11_key = PBKDF2(my_pass, self.salt,
+            #                      iterations=iterations).read(self.length)
+
+            cookie_file = self.cookie_file or expand_paths(openbsd_cookies, 'linux')
 
         elif sys.platform == "win32":
             key_file = self.key_file or expand_paths(windows_keys,'windows')
@@ -405,6 +417,9 @@ class Chrome(ChromiumBased):
                 '~/.config/google-chrome/Default/Cookies',
                 '~/.config/google-chrome-beta/Default/Cookies'
             ],
+            'openbsd_cookies':[
+                '~/.config/chromium/Default/Cookies'
+             ],
             'windows_cookies':[
                 {'env':'APPDATA', 'path':'..\\Local\\Google\\Chrome\\User Data\\Default\\Cookies'},
                 {'env':'LOCALAPPDATA', 'path':'Google\\Chrome\\User Data\\Default\\Cookies'},
