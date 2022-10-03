@@ -258,16 +258,18 @@ class ChromiumBased:
             cookie_file = self.cookie_file or expand_paths(linux_cookies, 'linux')
 
         elif sys.platform.startswith('openbsd'):
-            iterations = 1
+             iterations = 1
 
-            self.v10_key = PBKDF2(b'peanuts', self.salt,
+             self.v10_key = PBKDF2(b'peanuts', self.salt,
                                   iterations=iterations).read(self.length)
-            # AFAIK, the OpenBSD port's Chromium does not use v11
-            # my_pass = b'peanuts'
-            # self.v11_key = PBKDF2(my_pass, self.salt,
-            #                      iterations=iterations).read(self.length)
+             try:
+                 my_pass = get_linux_pass(os_crypt_name)
+                 self.v11_key = PBKDF2(my_pass, self.salt,
+                                    iterations=iterations).read(self.length)
+             except:
+                 self.v11_key = None
 
-            cookie_file = self.cookie_file or expand_paths(linux_cookies, 'linux')
+             cookie_file = self.cookie_file or expand_paths(linux_cookies, 'linux')
 
         elif sys.platform == "win32":
             key_file = self.key_file or expand_paths(windows_keys,'windows')
