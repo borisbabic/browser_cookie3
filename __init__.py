@@ -14,6 +14,7 @@ import base64
 from io import BytesIO
 from Crypto.Cipher import AES
 from typing import Union
+from re import search
 
 try:
     # should use pysqlite2 to read the cookies.sqlite on Windows
@@ -257,7 +258,7 @@ class ChromiumBased:
 
             cookie_file = self.cookie_file or expand_paths(linux_cookies, 'linux')
 
-        elif sys.platform.startswith('openbsd'):
+        elif search('bsd', sys.platform).group(0):
              iterations = 1
 
              self.v10_key = PBKDF2(b'peanuts', self.salt,
@@ -671,7 +672,7 @@ class Firefox:
             # legacy firefox <68 fallback
             cookie_files = glob.glob(os.path.join(os.environ.get('PROGRAMFILES'), 'Mozilla Firefox', 'profile', 'cookies.sqlite')) \
                 or glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)'), 'Mozilla Firefox', 'profile', 'cookies.sqlite'))
-        elif sys.platform.startswith('openbsd'):
+        elif search('bsd', sys.platform):
             general_path = os.path.expanduser('~/.mozilla/firefox')
             if os.path.isdir(general_path):
                 user_data_path = general_path
