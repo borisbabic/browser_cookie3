@@ -1,6 +1,4 @@
 **/*.swp
 __pycache__
 *.pyc
-build
-browser_cookie3.egg-info/
 

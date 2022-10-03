@@ -1,0 +1,64 @@
+diff --git a/.gitignore b/.gitignore
+index 3c25415..cf02e27 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,6 +1,3 @@
+ **/*.swp
+ __pycache__
+ *.pyc
+-build
+-browser_cookie3.egg-info/
+-
+diff --git a/README.md b/README.md
+index 2b7e2e9..91882dd 100644
+--- a/README.md
++++ b/README.md
+@@ -2,9 +2,7 @@
+ [![PyPi Version][PyPi-version]][PyPi-url]
+ [![License][License-shield]][License-url]
+ 
+-<strike>This is a python3 fork of [Richard Penman's Browser Cookie](https://github.com/richardpenman/browsercookie)</strike>  
+-This is a fork of a fork to add BSD support  
+-Currently works on Chromium & Firefox. Only OpenBSD is supported right now
++This is a python3 fork of [Richard Penman's Browser Cookie](https://github.com/richardpenman/browsercookie)
+ 
+ # Browser Cookie #
+ 
+diff --git a/__init__.py b/__init__.py
+index 1f24b5f..bc524da 100755
+--- a/__init__.py
++++ b/__init__.py
+@@ -257,20 +257,6 @@ class ChromiumBased:
+ 
+             cookie_file = self.cookie_file or expand_paths(linux_cookies, 'linux')
+ 
+-        elif sys.platform.startswith('openbsd'):
+-             iterations = 1
+-
+-             self.v10_key = PBKDF2(b'peanuts', self.salt,
+-                                  iterations=iterations).read(self.length)
+-             try:
+-                 my_pass = get_linux_pass(os_crypt_name)
+-                 self.v11_key = PBKDF2(my_pass, self.salt,
+-                                    iterations=iterations).read(self.length)
+-             except:
+-                 self.v11_key = None
+-
+-             cookie_file = self.cookie_file or expand_paths(linux_cookies, 'linux')
+-
+         elif sys.platform == "win32":
+             key_file = self.key_file or expand_paths(windows_keys,'windows')
+ 
+@@ -671,12 +657,6 @@ class Firefox:
+             # legacy firefox <68 fallback
+             cookie_files = glob.glob(os.path.join(os.environ.get('PROGRAMFILES'), 'Mozilla Firefox', 'profile', 'cookies.sqlite')) \
+                 or glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)'), 'Mozilla Firefox', 'profile', 'cookies.sqlite'))
+-        elif sys.platform.startswith('openbsd'):
+-            general_path = os.path.expanduser('~/.mozilla/firefox')
+-            if os.path.isdir(general_path):
+-                user_data_path = general_path
+-            else:
+-                user_data_path = os.path.expanduser('~/snap/firefox/common/.mozilla/firefox')
+         else:
+             raise BrowserCookieError(
+                 'Unsupported operating system: ' + sys.platform)
