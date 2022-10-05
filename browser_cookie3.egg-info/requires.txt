@@ -1,0 +1,6 @@
+pyaes
+pbkdf2
+keyring
+lz4
+pycryptodome
+SecretStorage

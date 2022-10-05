@@ -1,0 +1,11 @@
+LICENSE
+MANIFEST.in
+README
+README.md
+setup.py
+./__init__.py
+browser_cookie3.egg-info/PKG-INFO
+browser_cookie3.egg-info/SOURCES.txt
+browser_cookie3.egg-info/dependency_links.txt
+browser_cookie3.egg-info/requires.txt
+browser_cookie3.egg-info/top_level.txt
