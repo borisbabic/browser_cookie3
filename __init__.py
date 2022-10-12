@@ -14,7 +14,6 @@ import base64
 from io import BytesIO
 from Crypto.Cipher import AES
 from typing import Union
-from re import search
 
 try:
     # should use pysqlite2 to read the cookies.sqlite on Windows
@@ -247,7 +246,7 @@ class ChromiumBased:
 
             cookie_file = self.cookie_file or expand_paths(osx_cookies,'osx')
 
-        elif sys.platform.startswith('linux') or search('bsd', sys.platform).group(0):
+        elif sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
             my_pass = get_linux_pass(os_crypt_name)
 
             iterations = 1
@@ -647,7 +646,7 @@ class Firefox:
         if sys.platform == 'darwin':
             user_data_path = os.path.expanduser(
                 '~/Library/Application Support/Firefox')
-        elif sys.platform.startswith('linux') or search('bsd', sys.platform):
+        elif sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
             general_path = os.path.expanduser('~/.mozilla/firefox')
             if os.path.isdir(general_path):
                 user_data_path = general_path
