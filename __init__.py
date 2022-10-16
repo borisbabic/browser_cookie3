@@ -247,7 +247,7 @@ class ChromiumBased:
 
             cookie_file = self.cookie_file or expand_paths(osx_cookies,'osx')
 
-        elif sys.platform.startswith('linux'):
+        elif sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
             my_pass = get_linux_pass(os_crypt_name)
 
             iterations = 1
@@ -257,6 +257,7 @@ class ChromiumBased:
                                   iterations=iterations).read(self.length)
 
             cookie_file = self.cookie_file or expand_paths(linux_cookies, 'linux')
+
 
         elif sys.platform == "win32":
             key_file = self.key_file or expand_paths(windows_keys,'windows')
@@ -646,7 +647,7 @@ class Firefox:
         if sys.platform == 'darwin':
             user_data_path = os.path.expanduser(
                 '~/Library/Application Support/Firefox')
-        elif sys.platform.startswith('linux'):
+        elif sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
             general_path = os.path.expanduser('~/.mozilla/firefox')
             if os.path.isdir(general_path):
                 user_data_path = general_path
