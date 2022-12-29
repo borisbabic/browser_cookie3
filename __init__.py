@@ -12,7 +12,8 @@ import lz4.block
 import configparser
 import base64
 from io import BytesIO
-from Crypto.Cipher import AES
+from Cryptodome.Cipher import AES
+
 from typing import Union
 
 try:
@@ -286,7 +287,7 @@ class ChromiumBased:
                 "OS not recognized. Works on OSX, Windows, and Linux.")
 
         if not cookie_file:
-                raise BrowserCookieError('Failed to find {} cookie'.format(self.browser))
+            raise BrowserCookieError('Failed to find {} cookie'.format(self.browser))
 
         self.tmp_cookie_file = create_local_copy(cookie_file)
 
@@ -385,8 +386,7 @@ class ChromiumBased:
         encrypted_value = encrypted_value[3:]
         encrypted_value_half_len = int(len(encrypted_value) / 2)
 
-        cipher = pyaes.Decrypter(
-            pyaes.AESModeOfOperationCBC(key, self.iv))
+        cipher = pyaes.Decrypter(pyaes.AESModeOfOperationCBC(key, self.iv))
 
         # will rise Value Error: invalid padding byte if the key is wrong,
         # probably we did not got the key and used peanuts
@@ -741,14 +741,14 @@ class Safari:
     def __del__(self):
         if self.__buffer:
             self.__buffer.close()
-    
+
     def __open_file(self, cookie_file):
         if cookie_file is None:
             cookie_file = os.path.expanduser('~/Library/Cookies/Cookies.binarycookies')
         if not os.path.exists(cookie_file):
             raise BrowserCookieError('Can not find Safari cookie file')
         self.__buffer = open(cookie_file, 'rb')
-    
+
     def __read_file(self, size:int, offset:int=None):
         if offset is not None:
             self.__offset = offset
@@ -759,7 +759,7 @@ class Safari:
     def __parse_header(self):
         assert self.__buffer.read(4) == b'cook', 'Not a safari cookie file'
         self.__total_page = struct.unpack('>I', self.__buffer.read(4))[0]
-        
+
         self.__page_sizes = []
         for _ in range(self.__total_page):
             self.__page_sizes.append(struct.unpack('>I', self.__buffer.read(4))[0])
@@ -783,7 +783,7 @@ class Safari:
         flags = struct.unpack('<Q', page.read(8))[0]
         is_secure = bool(flags & 0x1)
         is_httponly = bool(flags & 0x4)
-        
+
         host_offset = struct.unpack('<I', page.read(4))[0]
         name_offset = struct.unpack('<I', page.read(4))[0]
         path_offset = struct.unpack('<I', page.read(4))[0]
@@ -792,7 +792,7 @@ class Safari:
         assert page.read(8) == b'\x00' * 8, self.NEW_ISSUE_MESSAGE
         expiry_date = int(struct.unpack('<d', page.read(8))[0] + self.APPLE_TO_UNIX_TIME) # convert to unix time
         access_time = int(struct.unpack('<d', page.read(8))[0] + self.APPLE_TO_UNIX_TIME) # convert to unix time
-        
+
         name = self.__read_until_null(page)
         value = self.__read_until_null(page)
         host = self.__read_until_null(page)
@@ -814,10 +814,10 @@ class Safari:
         for _ in range(n_cookies):
             cookie_offsets.append(struct.unpack('<I', page.read(4))[0])
         assert page.read(4) == b'\x00\x00\x00\x00', self.NEW_ISSUE_MESSAGE
-        
+
         for offset in cookie_offsets:
             yield self.__parse_cookie(page, offset)
-    
+
     def load(self):
         cj = http.cookiejar.CookieJar()
         for i in range(self.__total_page):
