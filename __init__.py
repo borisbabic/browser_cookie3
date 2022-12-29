@@ -6,7 +6,6 @@ import glob
 import http.cookiejar
 import json
 import os
-import os.path
 import struct
 import sys
 import tempfile
@@ -25,7 +24,8 @@ import keyring
 import lz4.block
 
 from Cryptodome.Cipher import AES
-from pbkdf2 import PBKDF2
+from Cryptodome.Protocol.KDF import PBKDF2
+from Cryptodome.Util.Padding import unpad
 
 __doc__ = 'Load browser cookies into a cookiejar'
 
@@ -243,8 +243,7 @@ class ChromiumBased:
             my_pass = my_pass.encode('utf-8')
 
             iterations = 1003  # number of pbkdf2 iterations on mac
-            self.v10_key = PBKDF2(my_pass, self.salt,
-                                  iterations=iterations).read(self.length)
+            self.v10_key = PBKDF2(my_pass, self.salt, self.length, iterations)
 
             cookie_file = self.cookie_file or expand_paths(osx_cookies,'osx')
 
@@ -252,10 +251,8 @@ class ChromiumBased:
             my_pass = get_linux_pass(os_crypt_name)
 
             iterations = 1
-            self.v10_key = PBKDF2(b'peanuts', self.salt,
-                                  iterations=iterations).read(self.length)
-            self.v11_key = PBKDF2(my_pass, self.salt,
-                                  iterations=iterations).read(self.length)
+            self.v10_key = PBKDF2(b'peanuts', self.salt, self.length, iterations)
+            self.v11_key = PBKDF2(my_pass, self.salt, self.length, iterations)
 
             cookie_file = self.cookie_file or expand_paths(linux_cookies, 'linux')
 
@@ -384,14 +381,12 @@ class ChromiumBased:
             assert encrypted_value[:3] != b'v11', "v11 keys should only appear on Linux."
         key = self.v11_key if encrypted_value[:3] == b'v11' else self.v10_key
         encrypted_value = encrypted_value[3:]
-        encrypted_value_half_len = len(encrypted_value) // 2
-        cipher = AES.new(key, AES.MODE_CBC, iv=self.iv)
+        cipher = AES.new(key, AES.MODE_CBC, self.iv)
 
         # will rise Value Error: invalid padding byte if the key is wrong,
         # probably we did not got the key and used peanuts
         try:
-            decrypted = cipher.decrypt(encrypted_value[:encrypted_value_half_len])
-            decrypted += cipher.decrypt(encrypted_value[encrypted_value_half_len:])
+            decrypted = unpad(cipher.decrypt(encrypted_value), AES.block_size)
         except ValueError:
             raise BrowserCookieError('Unable to get key for cookie decryption')
         return decrypted.decode('utf-8')

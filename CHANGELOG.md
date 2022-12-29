@@ -1,3 +1,11 @@
+### 0.16.3
+- [MODULE] Replaced `pycryptodome` with `pycryptodomex`
+- [MODULE] Removed `pbkdf2` dependency
+### 0.16.2
+- [MODULE] Added bsd support
+### 0.16.1
+- [MODULE] Fix resource warning about unclosed file
+- [FIREFOX] Added firefox snap directory
 ### 0.16.0
 - [MODULE] Added new browser support: Safari
 ### 0.15.0
