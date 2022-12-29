@@ -1,18 +1,15 @@
 # -*- coding: utf-8 -*-
 
-import os
-import os.path
-import struct
-import sys
+import base64
+import configparser
 import glob
 import http.cookiejar
 import json
+import os
+import struct
+import sys
 import tempfile
-import lz4.block
-import configparser
-import base64
 from io import BytesIO
-from Crypto.Cipher import AES
 from typing import Union
 
 try:
@@ -24,8 +21,11 @@ except ImportError:
 
 # external dependencies
 import keyring
-import pyaes
-from pbkdf2 import PBKDF2
+import lz4.block
+
+from Cryptodome.Cipher import AES
+from Cryptodome.Protocol.KDF import PBKDF2
+from Cryptodome.Util.Padding import unpad
 
 __doc__ = 'Load browser cookies into a cookiejar'
 
@@ -51,7 +51,8 @@ def create_local_copy(cookie_file):
 
 def windows_group_policy_path():
     # we know that we're running under windows at this point so it's safe to do these imports
-    from winreg import ConnectRegistry, HKEY_LOCAL_MACHINE, OpenKeyEx, QueryValueEx, REG_EXPAND_SZ, REG_SZ
+    from winreg import (HKEY_LOCAL_MACHINE, REG_EXPAND_SZ, REG_SZ,
+                        ConnectRegistry, OpenKeyEx, QueryValueEx)
     try:
         root = ConnectRegistry(None, HKEY_LOCAL_MACHINE)
         policy_key = OpenKeyEx(root, r"SOFTWARE\Policies\Google\Chrome")
@@ -242,8 +243,7 @@ class ChromiumBased:
             my_pass = my_pass.encode('utf-8')
 
             iterations = 1003  # number of pbkdf2 iterations on mac
-            self.v10_key = PBKDF2(my_pass, self.salt,
-                                  iterations=iterations).read(self.length)
+            self.v10_key = PBKDF2(my_pass, self.salt, self.length, iterations)
 
             cookie_file = self.cookie_file or expand_paths(osx_cookies,'osx')
 
@@ -251,10 +251,8 @@ class ChromiumBased:
             my_pass = get_linux_pass(os_crypt_name)
 
             iterations = 1
-            self.v10_key = PBKDF2(b'peanuts', self.salt,
-                                  iterations=iterations).read(self.length)
-            self.v11_key = PBKDF2(my_pass, self.salt,
-                                  iterations=iterations).read(self.length)
+            self.v10_key = PBKDF2(b'peanuts', self.salt, self.length, iterations)
+            self.v11_key = PBKDF2(my_pass, self.salt, self.length, iterations)
 
             cookie_file = self.cookie_file or expand_paths(linux_cookies, 'linux')
 
@@ -286,7 +284,7 @@ class ChromiumBased:
                 "OS not recognized. Works on OSX, Windows, and Linux.")
 
         if not cookie_file:
-                raise BrowserCookieError('Failed to find {} cookie'.format(self.browser))
+            raise BrowserCookieError('Failed to find {} cookie'.format(self.browser))
 
         self.tmp_cookie_file = create_local_copy(cookie_file)
 
@@ -383,20 +381,15 @@ class ChromiumBased:
             assert encrypted_value[:3] != b'v11', "v11 keys should only appear on Linux."
         key = self.v11_key if encrypted_value[:3] == b'v11' else self.v10_key
         encrypted_value = encrypted_value[3:]
-        encrypted_value_half_len = int(len(encrypted_value) / 2)
-
-        cipher = pyaes.Decrypter(
-            pyaes.AESModeOfOperationCBC(key, self.iv))
+        cipher = AES.new(key, AES.MODE_CBC, self.iv)
 
         # will rise Value Error: invalid padding byte if the key is wrong,
         # probably we did not got the key and used peanuts
         try:
-            decrypted = cipher.feed(encrypted_value[:encrypted_value_half_len])
-            decrypted += cipher.feed(encrypted_value[encrypted_value_half_len:])
-            decrypted += cipher.feed()
+            decrypted = unpad(cipher.decrypt(encrypted_value), AES.block_size)
         except ValueError:
             raise BrowserCookieError('Unable to get key for cookie decryption')
-        return decrypted.decode("utf-8")
+        return decrypted.decode('utf-8')
 
 
 class Chrome(ChromiumBased):
@@ -741,14 +734,14 @@ class Safari:
     def __del__(self):
         if self.__buffer:
             self.__buffer.close()
-    
+
     def __open_file(self, cookie_file):
         if cookie_file is None:
             cookie_file = os.path.expanduser('~/Library/Cookies/Cookies.binarycookies')
         if not os.path.exists(cookie_file):
             raise BrowserCookieError('Can not find Safari cookie file')
         self.__buffer = open(cookie_file, 'rb')
-    
+
     def __read_file(self, size:int, offset:int=None):
         if offset is not None:
             self.__offset = offset
@@ -759,7 +752,7 @@ class Safari:
     def __parse_header(self):
         assert self.__buffer.read(4) == b'cook', 'Not a safari cookie file'
         self.__total_page = struct.unpack('>I', self.__buffer.read(4))[0]
-        
+
         self.__page_sizes = []
         for _ in range(self.__total_page):
             self.__page_sizes.append(struct.unpack('>I', self.__buffer.read(4))[0])
@@ -783,7 +776,7 @@ class Safari:
         flags = struct.unpack('<Q', page.read(8))[0]
         is_secure = bool(flags & 0x1)
         is_httponly = bool(flags & 0x4)
-        
+
         host_offset = struct.unpack('<I', page.read(4))[0]
         name_offset = struct.unpack('<I', page.read(4))[0]
         path_offset = struct.unpack('<I', page.read(4))[0]
@@ -792,7 +785,7 @@ class Safari:
         assert page.read(8) == b'\x00' * 8, self.NEW_ISSUE_MESSAGE
         expiry_date = int(struct.unpack('<d', page.read(8))[0] + self.APPLE_TO_UNIX_TIME) # convert to unix time
         access_time = int(struct.unpack('<d', page.read(8))[0] + self.APPLE_TO_UNIX_TIME) # convert to unix time
-        
+
         name = self.__read_until_null(page)
         value = self.__read_until_null(page)
         host = self.__read_until_null(page)
@@ -814,10 +807,10 @@ class Safari:
         for _ in range(n_cookies):
             cookie_offsets.append(struct.unpack('<I', page.read(4))[0])
         assert page.read(4) == b'\x00\x00\x00\x00', self.NEW_ISSUE_MESSAGE
-        
+
         for offset in cookie_offsets:
             yield self.__parse_cookie(page, offset)
-    
+
     def load(self):
         cj = http.cookiejar.CookieJar()
         for i in range(self.__total_page):
