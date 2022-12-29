@@ -23,7 +23,7 @@ except ImportError:
 # external dependencies
 import keyring
 import lz4.block
-import pyaes
+
 from Cryptodome.Cipher import AES
 from pbkdf2 import PBKDF2
 
@@ -384,19 +384,17 @@ class ChromiumBased:
             assert encrypted_value[:3] != b'v11', "v11 keys should only appear on Linux."
         key = self.v11_key if encrypted_value[:3] == b'v11' else self.v10_key
         encrypted_value = encrypted_value[3:]
-        encrypted_value_half_len = int(len(encrypted_value) / 2)
-
-        cipher = pyaes.Decrypter(pyaes.AESModeOfOperationCBC(key, self.iv))
+        encrypted_value_half_len = len(encrypted_value) // 2
+        cipher = AES.new(key, AES.MODE_CBC, iv=self.iv)
 
         # will rise Value Error: invalid padding byte if the key is wrong,
         # probably we did not got the key and used peanuts
         try:
-            decrypted = cipher.feed(encrypted_value[:encrypted_value_half_len])
-            decrypted += cipher.feed(encrypted_value[encrypted_value_half_len:])
-            decrypted += cipher.feed()
+            decrypted = cipher.decrypt(encrypted_value[:encrypted_value_half_len])
+            decrypted += cipher.decrypt(encrypted_value[encrypted_value_half_len:])
         except ValueError:
             raise BrowserCookieError('Unable to get key for cookie decryption')
-        return decrypted.decode("utf-8")
+        return decrypted.decode('utf-8')
 
 
 class Chrome(ChromiumBased):
