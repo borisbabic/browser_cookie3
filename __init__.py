@@ -1,19 +1,16 @@
 # -*- coding: utf-8 -*-
 
+import base64
+import configparser
+import glob
+import http.cookiejar
+import json
 import os
 import os.path
 import struct
 import sys
-import glob
-import http.cookiejar
-import json
 import tempfile
-import lz4.block
-import configparser
-import base64
 from io import BytesIO
-from Cryptodome.Cipher import AES
-
 from typing import Union
 
 try:
@@ -25,7 +22,9 @@ except ImportError:
 
 # external dependencies
 import keyring
+import lz4.block
 import pyaes
+from Cryptodome.Cipher import AES
 from pbkdf2 import PBKDF2
 
 __doc__ = 'Load browser cookies into a cookiejar'
@@ -52,7 +51,8 @@ def create_local_copy(cookie_file):
 
 def windows_group_policy_path():
     # we know that we're running under windows at this point so it's safe to do these imports
-    from winreg import ConnectRegistry, HKEY_LOCAL_MACHINE, OpenKeyEx, QueryValueEx, REG_EXPAND_SZ, REG_SZ
+    from winreg import (HKEY_LOCAL_MACHINE, REG_EXPAND_SZ, REG_SZ,
+                        ConnectRegistry, OpenKeyEx, QueryValueEx)
     try:
         root = ConnectRegistry(None, HKEY_LOCAL_MACHINE)
         policy_key = OpenKeyEx(root, r"SOFTWARE\Policies\Google\Chrome")
