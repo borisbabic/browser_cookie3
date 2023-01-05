@@ -801,8 +801,9 @@ class Safari:
         path = self.__read_until_null(page)
         page.seek(cookie_offset + value_offset, 0)
         value = self.__read_until_null(page)
-        page.seek(cookie_offset + comment_offset, 0)
-        comment = self.__read_until_null(page)
+        if comment_offset:
+            page.seek(cookie_offset + comment_offset, 0)
+            comment = self.__read_until_null(page)
 
         return create_cookie(host, path, is_secure, expiry_date, name, value, is_httponly)
 
