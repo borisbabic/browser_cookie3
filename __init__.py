@@ -787,13 +787,11 @@ class Safari:
         name_offset = struct.unpack('<I', page.read(4))[0]
         path_offset = struct.unpack('<I', page.read(4))[0]
         value_offset = struct.unpack('<I', page.read(4))[0]
-        abbr_offset = struct.unpack('<H', page.read(2))[0]
-        if abbr_offset == 0:
-            page.seek(-2, 1) # go back
+        comment_offset = struct.unpack('<I', page.read(4))[0]
 
-        assert page.read(8) == b'\x00' * 8, self.NEW_ISSUE_MESSAGE
+        assert page.read(4) == b'\x00' * 4, self.NEW_ISSUE_MESSAGE
         expiry_date = int(struct.unpack('<d', page.read(8))[0] + self.APPLE_TO_UNIX_TIME) # convert to unix time
-        access_time = int(struct.unpack('<d', page.read(8))[0] + self.APPLE_TO_UNIX_TIME) # convert to unix time
+        creation_time = int(struct.unpack('<d', page.read(8))[0] + self.APPLE_TO_UNIX_TIME) # convert to unix time
 
         page.seek(cookie_offset + host_offset, 0)
         host = self.__read_until_null(page)
@@ -803,9 +801,8 @@ class Safari:
         path = self.__read_until_null(page)
         page.seek(cookie_offset + value_offset, 0)
         value = self.__read_until_null(page)
-        if abbr_offset:
-            page.seek(cookie_offset + abbr_offset, 0)
-            abbr = self.__read_until_null(page)
+        page.seek(cookie_offset + comment_offset, 0)
+        comment = self.__read_until_null(page)
 
         return create_cookie(host, path, is_secure, expiry_date, name, value, is_httponly)
 
