@@ -1,3 +1,6 @@
+### 0.16.4
+- [SAFARI] A new location for the `Cookies.binarycookies` file
+- [SAFARI] Fix for Cookie format change
 ### 0.16.3
 - [MODULE] Replaced `pycryptodome` with `pycryptodomex`
 - [MODULE] Removed `pbkdf2` dependency
