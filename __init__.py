@@ -723,6 +723,10 @@ class Safari:
 
     APPLE_TO_UNIX_TIME = 978307200
     NEW_ISSUE_MESSAGE = 'Page format changed.\nPlease create a new issue on: https://github.com/borisbabic/browser_cookie3/issues/new'
+    safari_cookies = [
+        '~/Library/Containers/com.apple.Safari/Data/Library/Cookies/Cookies.binarycookies',
+        '~/Library/Cookies/Cookies.binarycookies'
+    ]
 
     def __init__(self, cookie_file=None, domain_name="") -> None:
         self.__offset = 0
@@ -737,7 +741,7 @@ class Safari:
 
     def __open_file(self, cookie_file):
         if cookie_file is None:
-            cookie_file = os.path.expanduser('~/Library/Cookies/Cookies.binarycookies')
+            cookie_file = expand_paths(self.safari_cookies,'osx')
         if not os.path.exists(cookie_file):
             raise BrowserCookieError('Can not find Safari cookie file')
         self.__buffer = open(cookie_file, 'rb')
@@ -772,8 +776,10 @@ class Safari:
 
     def __parse_cookie(self, page:BytesIO, cookie_offset:int):
         page.seek(cookie_offset)
-        cookie_size = struct.unpack('<Q', page.read(8))[0]
-        flags = struct.unpack('<Q', page.read(8))[0]
+        cookie_size = struct.unpack('<I', page.read(4))[0]
+        page.seek(4, 1) # skip 4-bytes unknown data
+        flags = struct.unpack('<I', page.read(4))[0]
+        page.seek(4, 1) # skip 4-bytes unknown data
         is_secure = bool(flags & 0x1)
         is_httponly = bool(flags & 0x4)
 
@@ -781,15 +787,23 @@ class Safari:
         name_offset = struct.unpack('<I', page.read(4))[0]
         path_offset = struct.unpack('<I', page.read(4))[0]
         value_offset = struct.unpack('<I', page.read(4))[0]
+        comment_offset = struct.unpack('<I', page.read(4))[0]
 
-        assert page.read(8) == b'\x00' * 8, self.NEW_ISSUE_MESSAGE
+        assert page.read(4) == b'\x00' * 4, self.NEW_ISSUE_MESSAGE
         expiry_date = int(struct.unpack('<d', page.read(8))[0] + self.APPLE_TO_UNIX_TIME) # convert to unix time
-        access_time = int(struct.unpack('<d', page.read(8))[0] + self.APPLE_TO_UNIX_TIME) # convert to unix time
+        creation_time = int(struct.unpack('<d', page.read(8))[0] + self.APPLE_TO_UNIX_TIME) # convert to unix time
 
-        name = self.__read_until_null(page)
-        value = self.__read_until_null(page)
+        page.seek(cookie_offset + host_offset, 0)
         host = self.__read_until_null(page)
+        page.seek(cookie_offset + name_offset, 0)
+        name = self.__read_until_null(page)
+        page.seek(cookie_offset + path_offset, 0)
         path = self.__read_until_null(page)
+        page.seek(cookie_offset + value_offset, 0)
+        value = self.__read_until_null(page)
+        if comment_offset:
+            page.seek(cookie_offset + comment_offset, 0)
+            comment = self.__read_until_null(page)
 
         return create_cookie(host, path, is_secure, expiry_date, name, value, is_httponly)
 
