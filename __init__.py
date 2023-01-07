@@ -740,9 +740,8 @@ class Safari:
             self.__buffer.close()
 
     def __open_file(self, cookie_file):
-        if cookie_file is None:
-            cookie_file = expand_paths(self.safari_cookies,'osx')
-        if not os.path.exists(cookie_file):
+        cookie_file = cookie_file or expand_paths(self.safari_cookies, 'osx')
+        if not cookie_file:
             raise BrowserCookieError('Can not find Safari cookie file')
         self.__buffer = open(cookie_file, 'rb')
 
@@ -789,7 +788,7 @@ class Safari:
         value_offset = struct.unpack('<I', page.read(4))[0]
         comment_offset = struct.unpack('<I', page.read(4))[0]
 
-        assert page.read(4) == b'\x00' * 4, self.NEW_ISSUE_MESSAGE
+        assert page.read(4) == b'\x00\x00\x00\x00', self.NEW_ISSUE_MESSAGE
         expiry_date = int(struct.unpack('<d', page.read(8))[0] + self.APPLE_TO_UNIX_TIME) # convert to unix time
         creation_time = int(struct.unpack('<d', page.read(8))[0] + self.APPLE_TO_UNIX_TIME) # convert to unix time
 
