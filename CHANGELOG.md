@@ -1,3 +1,5 @@
+### 0.16.5
+- [MODULE] Fixed a bug where the `browser-cookie3.load()` fails on linux and Windows
 ### 0.16.4
 - [SAFARI] A new location for the `Cookies.binarycookies` file
 - [SAFARI] Fix for Cookie format change
