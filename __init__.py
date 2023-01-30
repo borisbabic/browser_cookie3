@@ -207,6 +207,24 @@ def expand_paths(paths:list, os_name:str):
     return next(expand_paths_impl(paths, os_name), None)
 
 
+def genarate_win_paths_chromium(paths:Union[str,list], channel:Union[str,list]=None, skip_os_check:bool=False):
+    """Generate paths for chromium based browsers on windows"""
+    
+    if not skip_os_check and sys.platform != 'win32':
+        return []
+    genararated_paths = []
+    channel = channel or ['']
+    if not isinstance(channel, list):
+        channel = [channel]
+    if not isinstance(paths, list):
+        paths = [paths]
+    for chan in channel:
+        for path in paths:
+            genararated_paths.append({'env': 'APPDATA', 'path': '..\\Local\\' + path.format(channel = chan)})
+            genararated_paths.append({'env': 'LOCALAPPDATA', 'path': path.format(channel = chan)})
+            genararated_paths.append({'env': 'APPDATA', 'path': path.format(channel = chan)})
+    return genararated_paths
+
 def text_factory(data):
     try:
         return data.decode('utf-8')
@@ -457,27 +475,50 @@ class Opera(ChromiumBased):
     """Class for Opera"""
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
         args = {
-            'linux_cookies': ['~/.config/opera/Cookies'],
-            'windows_cookies':[
-                {'env':'APPDATA', 'path':'..\\Local\\Opera Software\\Opera Stable\\Cookies'},
-                {'env':'LOCALAPPDATA', 'path':'Opera Software\\Opera Stable\\Cookies'},
-                {'env':'APPDATA', 'path':'Opera Software\\Opera Stable\\Cookies'},
-                {'env':'APPDATA', 'path':'..\\Local\\Opera Software\\Opera Stable\\Network\\Cookies'},
-                {'env':'LOCALAPPDATA', 'path':'Opera Software\\Opera Stable\\Network\\Cookies'},
-                {'env':'APPDATA', 'path':'Opera Software\\Opera Stable\\Network\\Cookies'}
+            'linux_cookies': [
+                '~/.config/opera/Cookies',
+                '~/.config/opera-beta/Cookies',
+                '~/.config/opera-developer/Cookies'
             ],
+            'windows_cookies': genarate_win_paths_chromium(
+                [
+                    'Opera Software\\Opera {channel}\\Cookies',
+                    'Opera Software\\Opera {channel}\\Network\\Cookies'
+                ], channel=['Stable', 'Next', 'Developer']
+            ),
             'osx_cookies': ['~/Library/Application Support/com.operasoftware.Opera/Cookies'],
-            'windows_keys': [
-                {'env':'APPDATA', 'path':'..\\Local\\Opera Software\\Opera Stable\\Local State'},
-                {'env':'LOCALAPPDATA', 'path':'Opera Software\\Opera Stable\\Local State'},
-                {'env':'APPDATA', 'path':'Opera Software\\Opera Stable\\Local State'}
-            ],
+            'windows_keys': genarate_win_paths_chromium(
+                'Opera Software\\Opera {channel}\\Local State',
+                channel=['Stable', 'Next', 'Developer']
+            ),
             'os_crypt_name':'chromium',
             'osx_key_service' : 'Opera Safe Storage',
             'osx_key_user' : 'Opera'
         }
         super().__init__(browser='Opera', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
 
+
+class OperaGX(ChromiumBased):
+    """Class for Opera GX"""
+    def __init__(self, cookie_file=None, domain_name="", key_file=None):
+        args = {
+            'linux_cookies': [], # Not available on Linux
+            'windows_cookies': genarate_win_paths_chromium(
+                [
+                    'Opera Software\\Opera GX {channel}\\Cookies',
+                    'Opera Software\\Opera GX {channel}\\Network\\Cookies'
+                ], channel=['Stable']
+            ),
+            'osx_cookies': ['~/Library/Application Support/com.operasoftware.Opera GX/Cookies'],
+            'windows_keys': genarate_win_paths_chromium(
+                'Opera Software\\Opera GX {channel}\\Local State',
+                channel=['Stable']
+            ),
+            'os_crypt_name': 'chromium',
+            'osx_key_service' : 'Opera GX Safe Storage',
+            'osx_key_user' : 'Opera GX'
+        }
+        super().__init__(browser='Opera GX', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
 
 class Brave(ChromiumBased):
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
@@ -860,6 +901,11 @@ def opera(cookie_file=None, domain_name="", key_file=None):
     """
     return Opera(cookie_file, domain_name, key_file).load()
 
+def opera_gx(cookie_file=None, domain_name="", key_file=None):
+    """Returns a cookiejar of the cookies used by Opera GX. Optionally pass in a
+    domain name to only load cookies from the specified domain
+    """
+    return OperaGX(cookie_file, domain_name, key_file).load()
 
 def brave(cookie_file=None, domain_name="", key_file=None):
     """Returns a cookiejar of the cookies and sessions used by Brave. Optionally
@@ -899,7 +945,7 @@ def load(domain_name=""):
     Optionally pass in a domain name to only load cookies from the specified domain
     """
     cj = http.cookiejar.CookieJar()
-    for cookie_fn in [chrome, chromium, opera, brave, edge, vivaldi, firefox, safari]:
+    for cookie_fn in [chrome, chromium, opera, opera_gx, brave, edge, vivaldi, firefox, safari]:
         try:
             for cookie in cookie_fn(domain_name=domain_name):
                 cj.set_cookie(cookie)
@@ -909,4 +955,4 @@ def load(domain_name=""):
 
 
 if __name__ == '__main__':
-    print(load())
+    print(opera())
