@@ -416,25 +416,24 @@ class Chrome(ChromiumBased):
         args = {
             'linux_cookies':[
                 '~/.config/google-chrome/Default/Cookies',
-                '~/.config/google-chrome-beta/Default/Cookies'
+                '~/.config/google-chrome-beta/Default/Cookies',
+                '~/.config/google-chrome-unstable/Default/Cookies'
             ],
-            'windows_cookies':[
-                {'env':'APPDATA', 'path':'..\\Local\\Google\\Chrome\\User Data\\Default\\Cookies'},
-                {'env':'LOCALAPPDATA', 'path':'Google\\Chrome\\User Data\\Default\\Cookies'},
-                {'env':'APPDATA', 'path':'Google\\Chrome\\User Data\\Default\\Cookies'},
-                {'env':'APPDATA', 'path':'..\\Local\\Google\\Chrome\\User Data\\Default\\Network\\Cookies'},
-                {'env':'LOCALAPPDATA', 'path':'Google\\Chrome\\User Data\\Default\\Network\\Cookies'},
-                {'env':'APPDATA', 'path':'Google\\Chrome\\User Data\\Default\\Network\\Cookies'}
-            ],
+            'windows_cookies': genarate_win_paths_chromium(
+                [
+                    'Google\\Chrome{channel}\\User Data\\Default\\Cookies',
+                    'Google\\Chrome{channel}\\User Data\\Default\\Network\\Cookies'
+                ],
+                channel=['', ' Beta', ' Dev']
+            ),
             'osx_cookies': [
                 '~/Library/Application Support/Google/Chrome/Default/Cookies',
                 '~/Library/Application Support/Google/Chrome/Profile */Cookies'
             ],
-            'windows_keys': [
-                {'env':'APPDATA', 'path':'..\\Local\\Google\\Chrome\\User Data\\Local State'},
-                {'env':'LOCALAPPDATA', 'path':'Google\\Chrome\\User Data\\Local State'},
-                {'env':'APPDATA', 'path':'Google\\Chrome\\User Data\\Local State'}
-            ],
+            'windows_keys': genarate_win_paths_chromium(
+                'Google\\Chrome{channel}\\User Data\\Local State',
+                channel=['', ' Beta', ' Dev']
+            ),
             'os_crypt_name':'chrome',
             'osx_key_service' : 'Chrome Safe Storage',
             'osx_key_user' : 'Chrome'
@@ -447,23 +446,19 @@ class Chromium(ChromiumBased):
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
         args = {
             'linux_cookies':['~/.config/chromium/Default/Cookies'],
-            'windows_cookies':[
-                {'env':'APPDATA', 'path':'..\\Local\\Chromium\\User Data\\Default\\Cookies'},
-                {'env':'LOCALAPPDATA', 'path':'Chromium\\User Data\\Default\\Cookies'},
-                {'env':'APPDATA', 'path':'Chromium\\User Data\\Default\\Cookies'},
-                {'env':'APPDATA', 'path':'..\\Local\\Chromium\\User Data\\Default\\Network\\Cookies'},
-                {'env':'LOCALAPPDATA', 'path':'Chromium\\User Data\\Default\\Network\\Cookies'},
-                {'env':'APPDATA', 'path':'Chromium\\User Data\\Default\\Network\\Cookies'}
-            ],
+            'windows_cookies': genarate_win_paths_chromium(
+                [
+                    'Chromium\\User Data\\Default\\Cookies',
+                    'Chromium\\User Data\\Default\\Network\\Cookies'
+                ]
+            ),
             'osx_cookies': [
                 '~/Library/Application Support/Chromium/Default/Cookies',
                 '~/Library/Application Support/Chromium/Profile */Cookies',
             ],
-            'windows_keys': [
-                {'env':'APPDATA', 'path':'..\\Local\\Chromium\\User Data\\Local State'},
-                {'env':'LOCALAPPDATA', 'path':'Chromium\\User Data\\Local State'},
-                {'env':'APPDATA', 'path':'Chromium\\User Data\\Local State'}
-            ],
+            'windows_keys': genarate_win_paths_chromium(
+                'Chromium\\User Data\\Local State'
+            ),
             'os_crypt_name':'chromium',
             'osx_key_service' : 'Chromium Safe Storage',
             'osx_key_user' : 'Chromium'
@@ -484,7 +479,8 @@ class Opera(ChromiumBased):
                 [
                     'Opera Software\\Opera {channel}\\Cookies',
                     'Opera Software\\Opera {channel}\\Network\\Cookies'
-                ], channel=['Stable', 'Next', 'Developer']
+                ],
+                channel=['Stable', 'Next', 'Developer']
             ),
             'osx_cookies': ['~/Library/Application Support/com.operasoftware.Opera/Cookies'],
             'windows_keys': genarate_win_paths_chromium(
@@ -507,7 +503,8 @@ class OperaGX(ChromiumBased):
                 [
                     'Opera Software\\Opera GX {channel}\\Cookies',
                     'Opera Software\\Opera GX {channel}\\Network\\Cookies'
-                ], channel=['Stable']
+                ],
+                channel=['Stable']
             ),
             'osx_cookies': ['~/Library/Application Support/com.operasoftware.Opera GX/Cookies'],
             'windows_keys': genarate_win_paths_chromium(
@@ -520,38 +517,33 @@ class OperaGX(ChromiumBased):
         }
         super().__init__(browser='Opera GX', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
 
+
 class Brave(ChromiumBased):
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
         args = {
             'linux_cookies':[
                 '~/.config/BraveSoftware/Brave-Browser/Default/Cookies',
-                '~/.config/BraveSoftware/Brave-Browser-Beta/Default/Cookies'
+                '~/.config/BraveSoftware/Brave-Browser-Beta/Default/Cookies',
+                '~/.config/BraveSoftware/Brave-Browser-Dev/Default/Cookies',
+                '~/.config/BraveSoftware/Brave-Browser-Nightly/Default/Cookies'
             ],
-            'windows_cookies':[
-                {'env':'APPDATA', 'path':'..\\Local\\BraveSoftware\\Brave-Browser\\User Data\\Default\\Cookies'},
-                {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Default\\Cookies'},
-                {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Default\\Cookies'},
-                {'env':'APPDATA', 'path':'..\\Local\\BraveSoftware\\Brave-Browser-Beta\\User Data\\Default\\Cookies'},
-                {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browser-Beta\\User Data\\Default\\Cookies'},
-                {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser-Beta\\User Data\\Default\\Cookies'},
-                {'env':'APPDATA', 'path':'..\\Local\\BraveSoftware\\Brave-Browser\\User Data\\Default\\Network\\Cookies'},
-                {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Default\\Network\\Cookies'},
-                {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Default\\Network\\Cookies'},
-            ],
+            'windows_cookies': genarate_win_paths_chromium(
+                [
+                    'BraveSoftware\\Brave-Browser{channel}\\User Data\\Default\\Cookies',
+                    'BraveSoftware\\Brave-Browser{channel}\\User Data\\Default\\Network\\Cookies',
+                ],
+                channel=['', '-Beta', '-Dev', '-Nightly']
+            ),
             'osx_cookies': [
                 '~/Library/Application Support/BraveSoftware/Brave-Browser/Default/Cookies',
                 '~/Library/Application Support/BraveSoftware/Brave-Browser-Beta/Default/Cookies',
                 '~/Library/Application Support/BraveSoftware/Brave-Browser/Profile */Cookies',
                 '~/Library/Application Support/BraveSoftware/Brave-Browser-Beta/Profile */Cookies'
             ],
-            'windows_keys': [
-                {'env':'APPDATA', 'path':'..\\Local\\BraveSoftware\\Brave-Browser\\User Data\\Local State'},
-                {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Local State'},
-                {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser\\User Data\\Local State'},
-                {'env':'APPDATA', 'path':'..\\Local\\BraveSoftware\\Brave-Browser-Beta\\User Data\\Local State'},
-                {'env':'LOCALAPPDATA', 'path':'BraveSoftware\\Brave-Browse-Betar\\User Data\\Local State'},
-                {'env':'APPDATA', 'path':'BraveSoftware\\Brave-Browser-Beta\\User Data\\Local State'}
-            ],
+            'windows_keys': genarate_win_paths_chromium(
+                'BraveSoftware\\Brave-Browser{channel}\\User Data\\Local State',
+                channel=['', '-Beta', '-Dev', '-Nightly']
+            ),
             'os_crypt_name':'brave',
             'osx_key_service' : 'Brave Safe Storage',
             'osx_key_user' : 'Brave'
@@ -565,25 +557,24 @@ class Edge(ChromiumBased):
         args = {
             'linux_cookies': [
                 '~/.config/microsoft-edge/Default/Cookies',
+                '~/.config/microsoft-edge-beta/Default/Cookies',
                 '~/.config/microsoft-edge-dev/Default/Cookies'
             ],
-            'windows_cookies':[
-                {'env':'APPDATA', 'path':'..\\Local\\Microsoft\\Edge\\User Data\\Default\\Cookies'},
-                {'env':'LOCALAPPDATA', 'path':'Microsoft\\Edge\\User Data\\Default\\Cookies'},
-                {'env':'APPDATA', 'path':'Microsoft\\Edge\\User Data\\Default\\Cookies'},
-                {'env':'APPDATA', 'path':'..\\Local\\Microsoft\\Edge\\User Data\\Default\\Network\\Cookies'},
-                {'env':'LOCALAPPDATA', 'path':'Microsoft\\Edge\\User Data\\Default\\Network\\Cookies'},
-                {'env':'APPDATA', 'path':'Microsoft\\Edge\\User Data\\Default\\Network\\Cookies'}
-            ],
+            'windows_cookies': genarate_win_paths_chromium(
+                [
+                    'Microsoft\\Edge{channel}\\User Data\\Default\\Cookies',
+                    'Microsoft\\Edge{channel}\\User Data\\Default\\Network\\Cookies'
+                ],
+                channel=['', ' Beta', ' Dev', ' SxS']
+            ),
             'osx_cookies': [
                 '~/Library/Application Support/Microsoft Edge/Default/Cookies',
                 '~/Library/Application Support/Microsoft Edge/Profile */Cookies'
             ],
-            'windows_keys': [
-                {'env':'APPDATA', 'path':'..\\Local\\Microsoft\\Edge\\User Data\\Local State'},
-                {'env':'LOCALAPPDATA', 'path':'Microsoft\\Edge\\User Data\\Local State'},
-                {'env':'APPDATA', 'path':'Microsoft\\Edge\\User Data\\Local State'}
-            ],
+            'windows_keys': genarate_win_paths_chromium(
+                'Microsoft\\Edge{channel}\\User Data\\Local State',
+                channel=['', ' Beta', ' Dev', ' SxS']
+            ),
             'os_crypt_name':'chromium',
             'osx_key_service' : 'Microsoft Edge Safe Storage',
             'osx_key_user' : 'Microsoft Edge'
@@ -596,26 +587,23 @@ class Vivaldi(ChromiumBased):
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
         args = {
             'linux_cookies': [
-                '~/.config/vivaldi/Default/Cookies'
+                '~/.config/vivaldi/Default/Cookies',
+                '~/.config/vivaldi-snapshot/Default/Cookies'
             ],
-            'windows_cookies':[
-                {'env':'APPDATA', 'path':'..\\Local\\Vivaldi\\User Data\\Default\\Cookies'},
-                {'env':'LOCALAPPDATA', 'path':'Vivaldi\\User Data\\Default\\Cookies'},
-                {'env':'APPDATA', 'path':'Vivaldi\\User Data\\Default\\Cookies'},
-                {'env':'APPDATA', 'path':'..\\Local\\Vivaldi\\User Data\\Default\\Network\\Cookies'},
-                {'env':'LOCALAPPDATA', 'path':'Vivaldi\\User Data\\Default\\Network\\Cookies'},
-                {'env':'APPDATA', 'path':'Vivaldi\\User Data\\Default\\Network\\Cookies'}
-            ],
+            'windows_cookies': genarate_win_paths_chromium(
+                [
+                    'Vivaldi\\User Data\\Default\\Cookies',
+                    'Vivaldi\\User Data\\Default\\Network\\Cookies'
+                ]
+            ),
             'osx_cookies': [
                 '~/Library/Application Support/Vivaldi/Default/Cookies',
                 '~/Library/Application Support/Vivaldi/Profile */Cookies'
             ],
-            'windows_keys': [
-                {'env':'APPDATA', 'path':'..\\Local\\Vivaldi\\User Data\\Local State'},
-                {'env':'LOCALAPPDATA', 'path':'Vivaldi\\User Data\\Local State'},
-                {'env':'APPDATA', 'path':'Vivaldi\\User Data\\Local State'}
-            ],
-            'os_crypt_name':'chrome',
+            'windows_keys': genarate_win_paths_chromium(
+                'Vivaldi\\User Data\\Local State'
+            ),
+            'os_crypt_name': 'chrome',
             'osx_key_service' : 'Vivaldi Safe Storage',
             'osx_key_user' : 'Vivaldi'
         }
@@ -955,4 +943,4 @@ def load(domain_name=""):
 
 
 if __name__ == '__main__':
-    print(opera())
+    print(brave())
