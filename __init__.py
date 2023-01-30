@@ -2,6 +2,7 @@
 
 import base64
 import configparser
+import contextlib
 import glob
 import http.cookiejar
 import json
@@ -113,66 +114,63 @@ def get_kde_wallet_password(os_crypt_name):
     folder = f'{os_crypt_name.capitalize()} Keys'
     key = f'{os_crypt_name.capitalize()} Safe Storage'
     app_id = 'browser-cookie3'
+    with contextlib.closing(dbus.SessionBus()) as connection:
+        kwalletd5_object = connection.get_object('org.kde.kwalletd5', '/modules/kwalletd5', False)
+        kwalletd5 = dbus.Interface(kwalletd5_object, 'org.kde.KWallet')
+        handle = kwalletd5.open(kwalletd5.networkWallet(), dbus.Int64(0), app_id)
+        if not kwalletd5.hasFolder(handle, folder, app_id):
+            kwalletd5.close(handle, False, app_id)
+            raise RuntimeError(f'KDE Wallet folder {folder} not found.')
+        password = kwalletd5.readPassword(handle, folder, key, app_id)
+        kwalletd5.close(handle, False, app_id)
+        return password.encode('utf-8')
 
-    kwalletd5_object = dbus.SessionBus().get_object('org.kde.kwalletd5', '/modules/kwalletd5', False)
-    kwalletd5 = dbus.Interface(kwalletd5_object, 'org.kde.KWallet')
-    handle = kwalletd5.open(kwalletd5.networkWallet(), dbus.Int64(0), app_id)
-    handle = dbus.Int32(handle)
-    if not kwalletd5.hasFolder(handle, folder, app_id):
-        raise RuntimeError(f'KDE Wallet folder {folder} not found.')
-    password = kwalletd5.readPassword(handle, folder, key, app_id)
-    kwalletd5.close(handle, False, app_id)
-    return password.encode('utf-8')
+
+def get_secretstorage_item(schema: str, application: str):
+    import dbus
+    
+    with contextlib.closing(dbus.SessionBus()) as connection:
+        secret_service = dbus.Interface(
+            connection.get_object('org.freedesktop.secrets', '/org/freedesktop/secrets', False),
+            'org.freedesktop.Secret.Service',
+        )
+        object_path = secret_service.SearchItems({
+            'xdg:schema': schema,
+            'application': application,
+        })
+        object_path = list(filter(lambda x: len(x), object_path))
+        if len(object_path) == 0:
+            raise RuntimeError(f'Can not find secret for {application}')
+        object_path = object_path[0][0]
+
+        secret_service.Unlock([object_path])
+        _, session = secret_service.OpenSession('plain', dbus.String('', variant_level=1))
+        _, _, secret, _ = secret_service.GetSecrets([object_path], session)[object_path]
+        return bytes(secret)
 
 
 def get_secretstorage_password(os_crypt_name):
     """Retrieve password used to encrypt cookies from libsecret"""
     # https://github.com/n8henrie/pycookiecheat/issues/12
 
-    import secretstorage
-
-    connection = secretstorage.dbus_init()
-    collection = secretstorage.get_default_collection(connection)
-    secret = None
-    my_pass = None
-
-    # we should not look for secret with label. Sometimes label can be different. For example,
-    # if Steam is installed before Chromium, Opera or Edge, it will show Steam Secret Storage as label.
-    # insted we should look with schema and application
-    secret = next(collection.search_items(
-        {'xdg:schema': 'chrome_libsecret_os_crypt_password_v2',
-            'application': os_crypt_name}), None)
-
-    if not secret:
-        # trying os_crypt_v1
-        secret = next(collection.search_items(
-            {'xdg:schema': 'chrome_libsecret_os_crypt_password_v1',
-                'application': os_crypt_name}), None)
-
-    if secret:
-        my_pass = secret.get_secret()
-
-    connection.close()
-    return my_pass
-
+    schemas = ['chrome_libsecret_os_crypt_password_v2', 'chrome_libsecret_os_crypt_password_v1']
+    for schema in schemas:
+        try:
+            return get_secretstorage_item(schema, os_crypt_name)
+        except RuntimeError:
+            pass
+    raise RuntimeError(f'Can not find secret for {os_crypt_name}')
 
 def get_linux_pass(os_crypt_name):
+    """Retrieve password used to encrypt cookies from Linux password manager"""
     try:
-        password = get_secretstorage_password(os_crypt_name)
-        if password is not None:
-            return password
-    except KeyboardInterrupt:
-        raise
-    except:
+        return get_secretstorage_password(os_crypt_name)
+    except RuntimeError:
         pass
-
     try:
         return get_kde_wallet_password(os_crypt_name)
-    except KeyboardInterrupt:
-        raise
-    except:
+    except RuntimeError:
         pass
-
     # try default peanuts password, probably won't work
     return b'peanuts'
 
@@ -943,4 +941,4 @@ def load(domain_name=""):
 
 
 if __name__ == '__main__':
-    print(brave())
+    print(opera())
