@@ -8,6 +8,7 @@ import http.cookiejar
 import json
 import os
 import struct
+import subprocess
 import sys
 import tempfile
 from io import BytesIO
@@ -21,7 +22,6 @@ except ImportError:
     import sqlite3
 
 # external dependencies
-import keyring
 import lz4.block
 
 from Cryptodome.Cipher import AES
@@ -29,6 +29,8 @@ from Cryptodome.Protocol.KDF import PBKDF2
 from Cryptodome.Util.Padding import unpad
 
 __doc__ = 'Load browser cookies into a cookiejar'
+
+CHROMIUM_DEFAULT_PASSWORD = b'peanuts'
 
 class BrowserCookieError(Exception):
     pass
@@ -107,6 +109,17 @@ def crypt_unprotect_data(
         return description, buffer_out.value
 
 
+def get_osx_keychain_password(osx_key_service, osx_key_user):
+    """Retrieve password used to encrypt cookies from OSX Keychain"""
+
+    cmd = ['/usr/bin/security', '-q', 'find-generic-password', '-w', '-a', osx_key_user, '-s', osx_key_service]
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = proc.communicate()
+    if proc.returncode != 0:
+        return CHROMIUM_DEFAULT_PASSWORD     # default password, probably won't work
+    return out.strip()
+
+
 def get_kde_wallet_password(os_crypt_name):
     """Retrieve password used to encrypt cookies from KDE Wallet"""
     import dbus
@@ -128,7 +141,7 @@ def get_kde_wallet_password(os_crypt_name):
 
 def get_secretstorage_item(schema: str, application: str):
     import dbus
-    
+
     with contextlib.closing(dbus.SessionBus()) as connection:
         secret_service = dbus.Interface(
             connection.get_object('org.freedesktop.secrets', '/org/freedesktop/secrets', False),
@@ -172,7 +185,7 @@ def get_linux_pass(os_crypt_name):
     except RuntimeError:
         pass
     # try default peanuts password, probably won't work
-    return b'peanuts'
+    return CHROMIUM_DEFAULT_PASSWORD
 
 
 def __expand_win_path(path:Union[dict,str]):
@@ -207,7 +220,7 @@ def expand_paths(paths:list, os_name:str):
 
 def genarate_win_paths_chromium(paths:Union[str,list], channel:Union[str,list]=None, skip_os_check:bool=False):
     """Generate paths for chromium based browsers on windows"""
-    
+
     if not skip_os_check and sys.platform != 'win32':
         return []
     genararated_paths = []
@@ -250,28 +263,19 @@ class ChromiumBased:
             windows_keys=None, os_crypt_name=None, osx_key_service=None, osx_key_user=None):
 
         if sys.platform == 'darwin':
-            # running Chromium or its derivatives on OSX
-            my_pass = keyring.get_password(osx_key_service, osx_key_user)
-
-            # try default peanuts password, probably won't work
-            if not my_pass:
-                my_pass = 'peanuts'
-            my_pass = my_pass.encode('utf-8')
-
+            password = get_osx_keychain_password(osx_key_service, osx_key_user)
             iterations = 1003  # number of pbkdf2 iterations on mac
-            self.v10_key = PBKDF2(my_pass, self.salt, self.length, iterations)
-
+            self.v10_key = PBKDF2(password, self.salt, self.length, iterations)
             cookie_file = self.cookie_file or expand_paths(osx_cookies,'osx')
 
         elif sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
-            my_pass = get_linux_pass(os_crypt_name)
+            password = get_linux_pass(os_crypt_name)
 
             iterations = 1
-            self.v10_key = PBKDF2(b'peanuts', self.salt, self.length, iterations)
-            self.v11_key = PBKDF2(my_pass, self.salt, self.length, iterations)
+            self.v10_key = PBKDF2(CHROMIUM_DEFAULT_PASSWORD, self.salt, self.length, iterations)
+            self.v11_key = PBKDF2(password, self.salt, self.length, iterations)
 
             cookie_file = self.cookie_file or expand_paths(linux_cookies, 'linux')
-
 
         elif sys.platform == "win32":
             key_file = self.key_file or expand_paths(windows_keys,'windows')
@@ -941,4 +945,4 @@ def load(domain_name=""):
 
 
 if __name__ == '__main__':
-    print(opera())
+    print(chrome())
