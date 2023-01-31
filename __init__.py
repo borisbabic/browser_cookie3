@@ -418,8 +418,11 @@ class Chrome(ChromiumBased):
         args = {
             'linux_cookies':[
                 '~/.config/google-chrome/Default/Cookies',
+                '~/.config/google-chrome/Profile */Cookies',
                 '~/.config/google-chrome-beta/Default/Cookies',
-                '~/.config/google-chrome-unstable/Default/Cookies'
+                '~/.config/google-chrome-beta/Profile */Cookies',
+                '~/.config/google-chrome-unstable/Default/Cookies',
+                '~/.config/google-chrome-unstable/Profile */Cookies'
             ],
             'windows_cookies': genarate_win_paths_chromium(
                 [
@@ -451,7 +454,10 @@ class Chromium(ChromiumBased):
     """Class for Chromium"""
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
         args = {
-            'linux_cookies':['~/.config/chromium/Default/Cookies'],
+            'linux_cookies':[
+                '~/.config/chromium/Default/Cookies',
+                '~/.config/chromium/Profile */Cookies'
+            ],
             'windows_cookies': genarate_win_paths_chromium(
                 [
                     'Chromium\\User Data\\Default\\Cookies',
@@ -533,9 +539,13 @@ class Brave(ChromiumBased):
         args = {
             'linux_cookies':[
                 '~/.config/BraveSoftware/Brave-Browser/Default/Cookies',
+                '~/.config/BraveSoftware/Brave-Browser/Profile */Cookies',
                 '~/.config/BraveSoftware/Brave-Browser-Beta/Default/Cookies',
+                '~/.config/BraveSoftware/Brave-Browser-Beta/Profile */Cookies',
                 '~/.config/BraveSoftware/Brave-Browser-Dev/Default/Cookies',
-                '~/.config/BraveSoftware/Brave-Browser-Nightly/Default/Cookies'
+                '~/.config/BraveSoftware/Brave-Browser-Dev/Profile */Cookies',
+                '~/.config/BraveSoftware/Brave-Browser-Nightly/Default/Cookies',
+                '~/.config/BraveSoftware/Brave-Browser-Nightly/Profile */Cookies'
             ],
             'windows_cookies': genarate_win_paths_chromium(
                 [
@@ -569,8 +579,11 @@ class Edge(ChromiumBased):
         args = {
             'linux_cookies': [
                 '~/.config/microsoft-edge/Default/Cookies',
+                '~/.config/microsoft-edge/Profile */Cookies',
                 '~/.config/microsoft-edge-beta/Default/Cookies',
-                '~/.config/microsoft-edge-dev/Default/Cookies'
+                '~/.config/microsoft-edge-beta/Profile */Cookies',
+                '~/.config/microsoft-edge-dev/Default/Cookies',
+                '~/.config/microsoft-edge-dev/Profile */Cookies'
             ],
             'windows_cookies': genarate_win_paths_chromium(
                 [
@@ -606,7 +619,9 @@ class Vivaldi(ChromiumBased):
         args = {
             'linux_cookies': [
                 '~/.config/vivaldi/Default/Cookies',
-                '~/.config/vivaldi-snapshot/Default/Cookies'
+                '~/.config/vivaldi/Profile */Cookies',
+                '~/.config/vivaldi-snapshot/Default/Cookies',
+                '~/.config/vivaldi-snapshot/Profile */Cookies'
             ],
             'windows_cookies': genarate_win_paths_chromium(
                 [
@@ -961,4 +976,4 @@ def load(domain_name=""):
 
 
 if __name__ == '__main__':
-    print(chrome())
+    print(edge())
