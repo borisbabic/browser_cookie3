@@ -427,7 +427,9 @@ class Chrome(ChromiumBased):
             'windows_cookies': genarate_win_paths_chromium(
                 [
                     'Google\\Chrome{channel}\\User Data\\Default\\Cookies',
-                    'Google\\Chrome{channel}\\User Data\\Default\\Network\\Cookies'
+                    'Google\\Chrome{channel}\\User Data\\Default\\Network\\Cookies',
+                    'Google\\Chrome{channel}\\User Data\\Profile *\\Cookies',
+                    'Google\\Chrome{channel}\\User Data\\Profile *\\Network\\Cookies'
                 ],
                 channel=['', ' Beta', ' Dev']
             ),
@@ -461,7 +463,9 @@ class Chromium(ChromiumBased):
             'windows_cookies': genarate_win_paths_chromium(
                 [
                     'Chromium\\User Data\\Default\\Cookies',
-                    'Chromium\\User Data\\Default\\Network\\Cookies'
+                    'Chromium\\User Data\\Default\\Network\\Cookies',
+                    'Chromium\\User Data\\Profile *\\Cookies',
+                    'Chromium\\User Data\\Profile *\\Network\\Cookies'
                 ]
             ),
             'osx_cookies': [
@@ -551,6 +555,8 @@ class Brave(ChromiumBased):
                 [
                     'BraveSoftware\\Brave-Browser{channel}\\User Data\\Default\\Cookies',
                     'BraveSoftware\\Brave-Browser{channel}\\User Data\\Default\\Network\\Cookies',
+                    'BraveSoftware\\Brave-Browser{channel}\\User Data\\Profile *\\Cookies',
+                    'BraveSoftware\\Brave-Browser{channel}\\User Data\\Profile *\\Network\\Cookies'
                 ],
                 channel=['', '-Beta', '-Dev', '-Nightly']
             ),
@@ -588,7 +594,9 @@ class Edge(ChromiumBased):
             'windows_cookies': genarate_win_paths_chromium(
                 [
                     'Microsoft\\Edge{channel}\\User Data\\Default\\Cookies',
-                    'Microsoft\\Edge{channel}\\User Data\\Default\\Network\\Cookies'
+                    'Microsoft\\Edge{channel}\\User Data\\Default\\Network\\Cookies',
+                    'Microsoft\\Edge{channel}\\User Data\\Profile *\\Cookies',
+                    'Microsoft\\Edge{channel}\\User Data\\Profile *\\Network\\Cookies'
                 ],
                 channel=['', ' Beta', ' Dev', ' SxS']
             ),
@@ -626,7 +634,9 @@ class Vivaldi(ChromiumBased):
             'windows_cookies': genarate_win_paths_chromium(
                 [
                     'Vivaldi\\User Data\\Default\\Cookies',
-                    'Vivaldi\\User Data\\Default\\Network\\Cookies'
+                    'Vivaldi\\User Data\\Default\\Network\\Cookies',
+                    'Vivaldi\\User Data\\Profile *\\Cookies',
+                    'Vivaldi\\User Data\\Profile *\\Network\\Cookies'
                 ]
             ),
             'osx_cookies': [
@@ -893,6 +903,7 @@ class Safari:
                 if self.__domain_filter(cookie):
                     cj.set_cookie(cookie)
         return cj
+
 
 def create_cookie(host, path, secure, expires, name, value, http_only):
     """Shortcut function to create a cookie"""
