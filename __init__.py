@@ -430,7 +430,11 @@ class Chrome(ChromiumBased):
             ),
             'osx_cookies': [
                 '~/Library/Application Support/Google/Chrome/Default/Cookies',
-                '~/Library/Application Support/Google/Chrome/Profile */Cookies'
+                '~/Library/Application Support/Google/Chrome/Profile */Cookies',
+                '~/Library/Application Support/Google/Chrome Beta/Default/Cookies',
+                '~/Library/Application Support/Google/Chrome Beta/Profile */Cookies',
+                '~/Library/Application Support/Google/Chrome Dev/Default/Cookies',
+                '~/Library/Application Support/Google/Chrome Dev/Profile */Cookies'
             ],
             'windows_keys': genarate_win_paths_chromium(
                 'Google\\Chrome{channel}\\User Data\\Local State',
@@ -484,7 +488,11 @@ class Opera(ChromiumBased):
                 ],
                 channel=['Stable', 'Next', 'Developer']
             ),
-            'osx_cookies': ['~/Library/Application Support/com.operasoftware.Opera/Cookies'],
+            'osx_cookies': [
+                '~/Library/Application Support/com.operasoftware.Opera/Cookies',
+                '~/Library/Application Support/com.operasoftware.OperaNext/Cookies',
+                '~/Library/Application Support/com.operasoftware.OperaDeveloper/Cookies'
+            ],
             'windows_keys': genarate_win_paths_chromium(
                 'Opera Software\\Opera {channel}\\Local State',
                 channel=['Stable', 'Next', 'Developer']
@@ -508,14 +516,14 @@ class OperaGX(ChromiumBased):
                 ],
                 channel=['Stable']
             ),
-            'osx_cookies': ['~/Library/Application Support/com.operasoftware.Opera GX/Cookies'],
+            'osx_cookies': ['~/Library/Application Support/com.operasoftware.OperaGX/Cookies'],
             'windows_keys': genarate_win_paths_chromium(
                 'Opera Software\\Opera GX {channel}\\Local State',
                 channel=['Stable']
             ),
             'os_crypt_name': 'chromium',
-            'osx_key_service' : 'Opera GX Safe Storage',
-            'osx_key_user' : 'Opera GX'
+            'osx_key_service' : 'Opera Safe Storage',
+            'osx_key_user' : 'Opera'
         }
         super().__init__(browser='Opera GX', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
 
@@ -538,9 +546,11 @@ class Brave(ChromiumBased):
             ),
             'osx_cookies': [
                 '~/Library/Application Support/BraveSoftware/Brave-Browser/Default/Cookies',
-                '~/Library/Application Support/BraveSoftware/Brave-Browser-Beta/Default/Cookies',
                 '~/Library/Application Support/BraveSoftware/Brave-Browser/Profile */Cookies',
-                '~/Library/Application Support/BraveSoftware/Brave-Browser-Beta/Profile */Cookies'
+                '~/Library/Application Support/BraveSoftware/Brave-Browser-Beta/Default/Cookies',
+                '~/Library/Application Support/BraveSoftware/Brave-Browser-Beta/Profile */Cookies',
+                '~/Library/Application Support/BraveSoftware/Brave-Browser-Nightly/Default/Cookies',
+                '~/Library/Application Support/BraveSoftware/Brave-Browser-Nightly/Profile */Cookies'
             ],
             'windows_keys': genarate_win_paths_chromium(
                 'BraveSoftware\\Brave-Browser{channel}\\User Data\\Local State',
@@ -571,7 +581,13 @@ class Edge(ChromiumBased):
             ),
             'osx_cookies': [
                 '~/Library/Application Support/Microsoft Edge/Default/Cookies',
-                '~/Library/Application Support/Microsoft Edge/Profile */Cookies'
+                '~/Library/Application Support/Microsoft Edge/Profile */Cookies',
+                '~/Library/Application Support/Microsoft Edge Beta/Default/Cookies',
+                '~/Library/Application Support/Microsoft Edge Beta/Profile */Cookies',
+                '~/Library/Application Support/Microsoft Edge Dev/Default/Cookies',
+                '~/Library/Application Support/Microsoft Edge Dev/Profile */Cookies',
+                '~/Library/Application Support/Microsoft Edge Canary/Default/Cookies',
+                '~/Library/Application Support/Microsoft Edge Canary/Profile */Cookies'
             ],
             'windows_keys': genarate_win_paths_chromium(
                 'Microsoft\\Edge{channel}\\User Data\\Local State',
