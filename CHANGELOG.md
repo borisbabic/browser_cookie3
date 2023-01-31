@@ -1,3 +1,9 @@
+### 0.17.0
+- [MODULE] Added new browser support: Opera GX
+- [MODULE] Added developer channels for Chromium based browsers
+- [MODULE] Added profile other than `Default` for Chromium based browsers
+- [MODULE] Marked internal functions with `_` prefix
+- [MODULE] Removed `keyring` and `SecretStorage` dependency
 ### 0.16.5
 - [MODULE] Fixed a bug where the `browser-cookie3.load()` fails on linux and Windows
 ### 0.16.4
@@ -5,7 +11,7 @@
 - [SAFARI] Fix for Cookie format change
 ### 0.16.3
 - [MODULE] Replaced `pycryptodome` with `pycryptodomex`
-- [MODULE] Removed `pbkdf2` dependency
+- [MODULE] Removed `pbkdf2` and `pyaes` dependency
 ### 0.16.2
 - [MODULE] Added bsd support
 ### 0.16.1
