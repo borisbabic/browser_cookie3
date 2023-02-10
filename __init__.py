@@ -128,7 +128,10 @@ def _get_kde_wallet_password(os_crypt_name):
     key = f'{os_crypt_name.capitalize()} Safe Storage'
     app_id = 'browser-cookie3'
     with contextlib.closing(dbus.SessionBus()) as connection:
-        kwalletd5_object = connection.get_object('org.kde.kwalletd5', '/modules/kwalletd5', False)
+        try:
+            kwalletd5_object = connection.get_object('org.kde.kwalletd5', '/modules/kwalletd5', False)
+        except dbus.exceptions.DBusException:
+            raise RuntimeError("The name org.kde.kwalletd5 was not provided by any .service files")
         kwalletd5 = dbus.Interface(kwalletd5_object, 'org.kde.KWallet')
         handle = kwalletd5.open(kwalletd5.networkWallet(), dbus.Int64(0), app_id)
         if not kwalletd5.hasFolder(handle, folder, app_id):
@@ -143,10 +146,13 @@ def _get_secretstorage_item(schema: str, application: str):
     import dbus
 
     with contextlib.closing(dbus.SessionBus()) as connection:
-        secret_service = dbus.Interface(
-            connection.get_object('org.freedesktop.secrets', '/org/freedesktop/secrets', False),
-            'org.freedesktop.Secret.Service',
-        )
+        try:
+            secret_service = dbus.Interface(
+                connection.get_object('org.freedesktop.secrets', '/org/freedesktop/secrets', False),
+                'org.freedesktop.Secret.Service',
+            )
+        except dbus.exceptions.DBusException:
+            raise RuntimeError("The name org.freedesktop.secrets was not provided by any .service files")
         object_path = secret_service.SearchItems({
             'xdg:schema': schema,
             'application': application,
