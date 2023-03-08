@@ -724,11 +724,15 @@ class Firefox:
             user_data_path = os.path.expanduser(
                 '~/Library/Application Support/Firefox')
         elif sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
-            general_path = os.path.expanduser('~/.mozilla/firefox')
+            # Looking for cookies from a Snap based Firefox first, as some
+            # users might have profiles at both this and the other location,
+            # as they were migrated to Snap by their OS at some point, leaving
+            # cookies at the other location outdated.
+            general_path = os.path.expanduser('~/snap/firefox/common/.mozilla/firefox')
             if os.path.isdir(general_path):
                 user_data_path = general_path
             else:
-                user_data_path = os.path.expanduser('~/snap/firefox/common/.mozilla/firefox')
+                user_data_path = os.path.expanduser('~/.mozilla/firefox')
         elif sys.platform == 'win32':
             user_data_path = os.path.join(
                 os.environ.get('APPDATA'), 'Mozilla', 'Firefox')
