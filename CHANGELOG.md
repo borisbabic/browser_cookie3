@@ -1,3 +1,7 @@
+### 0.17.1
+- [MODULE] Fixed when no password storage is provided by any service on linux
+- [MODULE] Fixed dbus related error on linux
+- [MODULE] Look for Firefox cookies in Snap folder first on linux due Ubuntu changes
 ### 0.17.0
 - [MODULE] Added new browser support: Opera GX
 - [MODULE] Added developer channels for Chromium based browsers
