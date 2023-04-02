@@ -1019,7 +1019,7 @@ def brave(cookie_file=None, domain_name="", key_file=None):
 
 
 def edge(cookie_file=None, domain_name="", key_file=None):
-    """Returns a cookiejar of the cookies used by Microsoft Egde. Optionally pass in a
+    """Returns a cookiejar of the cookies used by Microsoft Edge. Optionally pass in a
     domain name to only load cookies from the specified domain
     """
     return Edge(cookie_file, domain_name, key_file).load()

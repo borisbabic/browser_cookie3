@@ -87,7 +87,7 @@ Alternatively if you are only interested in cookies from a specific domain, you 
 'richardpenman / home &mdash; Bitbucket'
 ```
 ## Fresh cookie files
-Creating and testing a fresh cookie file can help eliminate some possible user specific issues. It also allows you to upload a cookie file you are having issus with, since you should never upload your main cookie file!
+Creating and testing a fresh cookie file can help eliminate some possible user specific issues. It also allows you to upload a cookie file you are having issues with, since you should never upload your main cookie file!
 ### Chrome and chromium
 For linux and assumably mac:
 
