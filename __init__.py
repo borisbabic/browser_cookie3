@@ -318,8 +318,6 @@ class _LinuxPasswordManager:
 class ChromiumBased:
     """Super class for all Chromium based browsers"""
 
-    UNIX_TO_NT_EPOCH_OFFSET = 11644473600  # seconds from 1601-01-01T00:00:00Z to 1970-01-01T00:00:00Z
-
     def __init__(self, browser:str, cookie_file=None, domain_name="", key_file=None, **kwargs):
         self.salt = b'saltysalt'
         self.iv = b' ' * 16
@@ -382,6 +380,17 @@ class ChromiumBased:
     def __str__(self):
         return self.browser
 
+    @staticmethod
+    def _nt_to_unix_timestamp(value):
+        # Per https://github.com/chromium/chromium/blob/main/base/time/time.h#L5-L7,
+        # Chromium-based browsers store cookies' expiration timestamps as MICROSECONDS elapsed
+        # since the Windows NT epoch (1601-01-01 0:00:00 GMT), or 0 for session cookies.
+        #
+        UNIX_TO_NT_EPOCH_OFFSET = 11644473600  # seconds from 1601-01-01T00:00:00Z to 1970-01-01T00:00:00Z
+        if value in (0, None):
+            return None
+        return (value / 1000000) - UNIX_TO_NT_EPOCH_OFFSET
+
     def load(self):
         """Load sqlite cookies into a cookiejar"""
         con = _sqlite3_connect_readonly(self.cookie_file)
@@ -399,17 +408,11 @@ class ChromiumBased:
         cj = http.cookiejar.CookieJar()
 
         for item in cur.fetchall():
-            # Per https://github.com/chromium/chromium/blob/main/base/time/time.h#L5-L7,
-            # Chromium-based browsers store cookies' expiration timestamps as MICROSECONDS elapsed
-            # since the Windows NT epoch (1601-01-01 0:00:00 GMT), or 0 for session cookies.
-            #
+            host, path, secure, expires_nt_time_epoch, name, value, enc_value, http_only = item
+
             # http.cookiejar stores cookies' expiration timestamps as SECONDS since the Unix epoch
             # (1970-01-01 0:00:00 GMT, or None for session cookies.
-            host, path, secure, expires_nt_time_epoch, name, value, enc_value, http_only = item
-            if (expires_nt_time_epoch == 0):
-                expires = None
-            else:
-                expires = (expires_nt_time_epoch / 1000000) - self.UNIX_TO_NT_EPOCH_OFFSET
+            expires = self._nt_to_unix_timestamp(expires_nt_time_epoch)
 
             value = self._decrypt(value, enc_value)
             c = create_cookie(host, path, secure, expires, name, value, http_only)
