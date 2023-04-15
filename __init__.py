@@ -14,12 +14,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Union
 
-try:
-    # should use pysqlite2 to read the cookies.sqlite on Windows
-    # otherwise will raise the "sqlite3.DatabaseError: file is encrypted or is not a database" exception
-    from pysqlite2 import dbapi2 as sqlite3
-except ImportError:
-    import sqlite3
+import sqlite3
 
 if sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
     try:
