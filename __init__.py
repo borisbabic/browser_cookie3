@@ -520,7 +520,6 @@ class ChromiumBased:
             raise BrowserCookieError('Unable to get key for cookie decryption')
         return decrypted.decode('utf-8')
 
-
 class Chrome(ChromiumBased):
     """Class for Google Chrome"""
     def __init__(self, cookie_file=None, domain_name="", key_file=None, login_file=None):
@@ -1015,6 +1014,9 @@ class Safari:
                 if self.__domain_filter(cookie):
                     cj.set_cookie(cookie)
         return cj
+
+
+LoginCredential = namedtuple('LoginCredential', 'host path username password accessed created modified secure times_used')
 
 
 LoginCredential = namedtuple('LoginCredential', 'host path username password accessed created modified secure times_used')
