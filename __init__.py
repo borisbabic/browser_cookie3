@@ -10,16 +10,11 @@ import os
 import struct
 import subprocess
 import sys
-import tempfile
 from io import BytesIO
+from pathlib import Path
 from typing import Union
 
-try:
-    # should use pysqlite2 to read the cookies.sqlite on Windows
-    # otherwise will raise the "sqlite3.DatabaseError: file is encrypted or is not a database" exception
-    from pysqlite2 import dbapi2 as sqlite3
-except ImportError:
-    import sqlite3
+import sqlite3
 
 if sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
     try:
@@ -43,22 +38,6 @@ CHROMIUM_DEFAULT_PASSWORD = b'peanuts'
 
 class BrowserCookieError(Exception):
     pass
-
-
-def _create_local_copy(cookie_file):
-    """Make a local copy of the sqlite cookie database and return the new filename.
-    This is necessary in case this database is still being written to while the user browses
-    to avoid sqlite locking errors.
-    """
-    # check if cookie file exists
-    if os.path.exists(cookie_file):
-        # copy to random name in tmp folder
-        tmp_cookie_file = tempfile.NamedTemporaryFile(suffix='.sqlite').name
-        with open(tmp_cookie_file, "wb") as f1, open(cookie_file, "rb") as f2:
-            f1.write(f2.read())
-        return tmp_cookie_file
-    else:
-        raise BrowserCookieError('Can not find cookie file at: ' + cookie_file)
 
 
 def _windows_group_policy_path():
@@ -159,6 +138,20 @@ def _expand_paths(paths:list, os_name:str):
     return next(_expand_paths_impl(paths, os_name), None)
 
 
+def _sqlite3_connect_readonly(path):
+    uri = Path(path).absolute().as_uri()
+    ex = None
+    for options in ('?mode=ro', '?mode=ro&nolock=1'):
+        con = sqlite3.connect(uri + options, uri=True)
+        try:
+            con.cursor().execute('select 1 from sqlite_master')
+        except sqlite3.OperationalError as e:
+            ex = e
+        else:
+            return con
+    raise ex
+
+
 def _normalize_genarate_paths_chromium(paths:Union[str,list], channel:Union[str,list]=None):
     channel = channel or ['']
     if not isinstance(channel, list):
@@ -201,14 +194,14 @@ def _text_factory(data):
 class _JeepneyConnection:
     def __init__(self, object_path, bus_name, interface):
         self.__dbus_address = jeepney.DBusAddress(object_path, bus_name, interface)
-    
+
     def __enter__(self):
         self.__connection = open_dbus_connection()
         return self
-    
+
     def __exit__(self, exc_type, exc_value, traceback):
         self.__connection.close()
-    
+
     def close(self):
         self.__connection.close()
 
@@ -256,7 +249,7 @@ class _LinuxPasswordManager:
             except RuntimeError:
                 pass
         raise RuntimeError(f'Can not find secret for {os_crypt_name}')
-    
+
     def __get_secretstorage_item_dbus(self, schema: str, application: str):
         with contextlib.closing(dbus.SessionBus()) as connection:
             try:
@@ -384,19 +377,14 @@ class ChromiumBased:
         if not cookie_file:
             raise BrowserCookieError('Failed to find {} cookie'.format(self.browser))
 
-        self.tmp_cookie_file = _create_local_copy(cookie_file)
-
-    def __del__(self):
-        # remove temporary backup of sqlite cookie database
-        if hasattr(self, 'tmp_cookie_file'):  # if there was an error till here
-            os.remove(self.tmp_cookie_file)
+        self.cookie_file = cookie_file
 
     def __str__(self):
         return self.browser
 
     def load(self):
         """Load sqlite cookies into a cookiejar"""
-        con = sqlite3.connect(self.tmp_cookie_file)
+        con = _sqlite3_connect_readonly(self.cookie_file)
         con.text_factory = _text_factory
         cur = con.cursor()
         try:
@@ -724,21 +712,14 @@ class Vivaldi(ChromiumBased):
 class Firefox:
     """Class for Firefox"""
     def __init__(self, cookie_file=None, domain_name=""):
-        self.tmp_cookie_file = None
-        cookie_file = cookie_file or self.find_cookie_file()
-        self.tmp_cookie_file = _create_local_copy(cookie_file)
+        self.cookie_file = cookie_file or self.find_cookie_file()
         # current sessions are saved in sessionstore.js
         self.session_file = os.path.join(
-            os.path.dirname(cookie_file), 'sessionstore.js')
+            os.path.dirname(self.cookie_file), 'sessionstore.js')
         self.session_file_lz4 = os.path.join(os.path.dirname(
-            cookie_file), 'sessionstore-backups', 'recovery.jsonlz4')
+            self.cookie_file), 'sessionstore-backups', 'recovery.jsonlz4')
         # domain name to filter cookies by
         self.domain_name = domain_name
-
-    def __del__(self):
-        # remove temporary backup of sqlite cookie database
-        if self.tmp_cookie_file:
-            os.remove(self.tmp_cookie_file)
 
     def __str__(self):
         return 'firefox'
@@ -844,7 +825,7 @@ class Firefox:
                     cj.set_cookie(Firefox.__create_session_cookie(cookie))
 
     def load(self):
-        con = sqlite3.connect(self.tmp_cookie_file)
+        con = _sqlite3_connect_readonly(self.cookie_file)
         cur = con.cursor()
         cur.execute('select host, path, isSecure, expiry, name, value, isHttpOnly from moz_cookies '
                     'where host like ?', ('%{}%'.format(self.domain_name),))
