@@ -10,16 +10,13 @@ import os
 import struct
 import subprocess
 import sys
-import tempfile
+from collections import namedtuple
 from io import BytesIO
+from pathlib import Path
 from typing import Union
+from urllib.parse import urlsplit
 
-try:
-    # should use pysqlite2 to read the cookies.sqlite on Windows
-    # otherwise will raise the "sqlite3.DatabaseError: file is encrypted or is not a database" exception
-    from pysqlite2 import dbapi2 as sqlite3
-except ImportError:
-    import sqlite3
+import sqlite3
 
 if sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
     try:
@@ -43,22 +40,6 @@ CHROMIUM_DEFAULT_PASSWORD = b'peanuts'
 
 class BrowserCookieError(Exception):
     pass
-
-
-def _create_local_copy(cookie_file):
-    """Make a local copy of the sqlite cookie database and return the new filename.
-    This is necessary in case this database is still being written to while the user browses
-    to avoid sqlite locking errors.
-    """
-    # check if cookie file exists
-    if os.path.exists(cookie_file):
-        # copy to random name in tmp folder
-        tmp_cookie_file = tempfile.NamedTemporaryFile(suffix='.sqlite').name
-        with open(tmp_cookie_file, "wb") as f1, open(cookie_file, "rb") as f2:
-            f1.write(f2.read())
-        return tmp_cookie_file
-    else:
-        raise BrowserCookieError('Can not find cookie file at: ' + cookie_file)
 
 
 def _windows_group_policy_path():
@@ -159,6 +140,20 @@ def _expand_paths(paths:list, os_name:str):
     return next(_expand_paths_impl(paths, os_name), None)
 
 
+def _sqlite3_connect_readonly(path):
+    uri = Path(path).absolute().as_uri()
+    ex = None
+    for options in ('?mode=ro', '?mode=ro&nolock=1'):
+        con = sqlite3.connect(uri + options, uri=True)
+        try:
+            con.cursor().execute('select 1 from sqlite_master')
+        except sqlite3.OperationalError as e:
+            ex = e
+        else:
+            return con
+    raise ex
+
+
 def _normalize_genarate_paths_chromium(paths:Union[str,list], channel:Union[str,list]=None):
     channel = channel or ['']
     if not isinstance(channel, list):
@@ -201,14 +196,14 @@ def _text_factory(data):
 class _JeepneyConnection:
     def __init__(self, object_path, bus_name, interface):
         self.__dbus_address = jeepney.DBusAddress(object_path, bus_name, interface)
-    
+
     def __enter__(self):
         self.__connection = open_dbus_connection()
         return self
-    
+
     def __exit__(self, exc_type, exc_value, traceback):
         self.__connection.close()
-    
+
     def close(self):
         self.__connection.close()
 
@@ -256,7 +251,7 @@ class _LinuxPasswordManager:
             except RuntimeError:
                 pass
         raise RuntimeError(f'Can not find secret for {os_crypt_name}')
-    
+
     def __get_secretstorage_item_dbus(self, schema: str, application: str):
         with contextlib.closing(dbus.SessionBus()) as connection:
             try:
@@ -325,27 +320,28 @@ class _LinuxPasswordManager:
 class ChromiumBased:
     """Super class for all Chromium based browsers"""
 
-    UNIX_TO_NT_EPOCH_OFFSET = 11644473600  # seconds from 1601-01-01T00:00:00Z to 1970-01-01T00:00:00Z
-
-    def __init__(self, browser:str, cookie_file=None, domain_name="", key_file=None, **kwargs):
+    def __init__(self, browser:str, cookie_file=None, domain_name="", key_file=None, login_file=None, **kwargs):
         self.salt = b'saltysalt'
         self.iv = b' ' * 16
         self.length = 16
         self.browser = browser
         self.cookie_file = cookie_file
+        self.login_file = login_file
         self.domain_name = domain_name
         self.key_file = key_file
         self.__add_key_and_cookie_file(**kwargs)
 
     def __add_key_and_cookie_file(self,
             linux_cookies=None, windows_cookies=None, osx_cookies=None,
-            windows_keys=None, os_crypt_name=None, osx_key_service=None, osx_key_user=None):
+            windows_keys=None, os_crypt_name=None, osx_key_service=None, osx_key_user=None,
+            linux_logins=[]):
 
         if sys.platform == 'darwin':
             password = _get_osx_keychain_password(osx_key_service, osx_key_user)
             iterations = 1003  # number of pbkdf2 iterations on mac
             self.v10_key = PBKDF2(password, self.salt, self.length, iterations)
             cookie_file = self.cookie_file or _expand_paths(osx_cookies,'osx')
+            login_file = None  # TODO
 
         elif sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
             password = _LinuxPasswordManager(USE_DBUS_LINUX).get_password(os_crypt_name)
@@ -354,6 +350,7 @@ class ChromiumBased:
             self.v11_key = PBKDF2(password, self.salt, self.length, iterations)
 
             cookie_file = self.cookie_file or _expand_paths(linux_cookies, 'linux')
+            login_file = self.login_file or _expand_paths(linux_logins,'linux')
 
         elif sys.platform == "win32":
             key_file = self.key_file or _expand_paths(windows_keys,'windows')
@@ -377,6 +374,8 @@ class ChromiumBased:
                 else:
                     cookie_file = _expand_paths(windows_cookies,'windows')
 
+            login_file = None  # TODO
+
         else:
             raise BrowserCookieError(
                 "OS not recognized. Works on OSX, Windows, and Linux.")
@@ -384,19 +383,26 @@ class ChromiumBased:
         if not cookie_file:
             raise BrowserCookieError('Failed to find {} cookie'.format(self.browser))
 
-        self.tmp_cookie_file = _create_local_copy(cookie_file)
-
-    def __del__(self):
-        # remove temporary backup of sqlite cookie database
-        if hasattr(self, 'tmp_cookie_file'):  # if there was an error till here
-            os.remove(self.tmp_cookie_file)
+        self.cookie_file = cookie_file
+        self.login_file = login_file
 
     def __str__(self):
         return self.browser
 
+    @staticmethod
+    def _nt_to_unix_timestamp(value):
+        # Per https://github.com/chromium/chromium/blob/main/base/time/time.h#L5-L7,
+        # Chromium-based browsers store cookies' expiration timestamps as MICROSECONDS elapsed
+        # since the Windows NT epoch (1601-01-01 0:00:00 GMT), or 0 for session cookies.
+        #
+        UNIX_TO_NT_EPOCH_OFFSET = 11644473600  # seconds from 1601-01-01T00:00:00Z to 1970-01-01T00:00:00Z
+        if value in (0, None):
+            return None
+        return (value / 1000000) - UNIX_TO_NT_EPOCH_OFFSET
+
     def load(self):
         """Load sqlite cookies into a cookiejar"""
-        con = sqlite3.connect(self.tmp_cookie_file)
+        con = _sqlite3_connect_readonly(self.cookie_file)
         con.text_factory = _text_factory
         cur = con.cursor()
         try:
@@ -411,23 +417,48 @@ class ChromiumBased:
         cj = http.cookiejar.CookieJar()
 
         for item in cur.fetchall():
-            # Per https://github.com/chromium/chromium/blob/main/base/time/time.h#L5-L7,
-            # Chromium-based browsers store cookies' expiration timestamps as MICROSECONDS elapsed
-            # since the Windows NT epoch (1601-01-01 0:00:00 GMT), or 0 for session cookies.
-            #
+            host, path, secure, expires_nt_time_epoch, name, value, enc_value, http_only = item
+
             # http.cookiejar stores cookies' expiration timestamps as SECONDS since the Unix epoch
             # (1970-01-01 0:00:00 GMT, or None for session cookies.
-            host, path, secure, expires_nt_time_epoch, name, value, enc_value, http_only = item
-            if (expires_nt_time_epoch == 0):
-                expires = None
-            else:
-                expires = (expires_nt_time_epoch / 1000000) - self.UNIX_TO_NT_EPOCH_OFFSET
+            expires = self._nt_to_unix_timestamp(expires_nt_time_epoch)
 
             value = self._decrypt(value, enc_value)
             c = create_cookie(host, path, secure, expires, name, value, http_only)
             cj.set_cookie(c)
         con.close()
         return cj
+
+    def load_logins(self):
+        """Load saved login credentials into a dictionary"""
+        if not self.login_file:
+            raise BrowserCookieError('{} saved logins database file not found, or not yet implemented'.format(self.browser))
+
+        con = _sqlite3_connect_readonly(self.login_file)
+        con.text_factory = _text_factory
+        cur = con.cursor()
+        cur.execute('SELECT signon_realm, username_value, password_value, date_last_used, date_created, date_password_modified, times_used '
+                    'FROM logins WHERE signon_realm like ? ORDER BY signon_realm, username_value;', ('%{}%'.format(self.domain_name),))
+
+        logins = []
+        for item in cur:
+            signon_realm, username, password_enc, accessed_nt, created_nt, modified_nt, times_used = item
+            password=self._decrypt(None, password_enc)
+            if not username and not password:
+                continue  # No value in exporting this
+
+            p = urlsplit(signon_realm)
+            logins.append(LoginCredential(
+                host=p.netloc, path=p.path if p.path not in ('', None, '/') else None,
+                username=username, password=password,
+                accessed=self._nt_to_unix_timestamp(accessed_nt),
+                created=self._nt_to_unix_timestamp(created_nt),
+                modified=self._nt_to_unix_timestamp(modified_nt),
+                secure=(p.scheme == 'https'),
+                times_used=times_used,
+            ))
+        con.close()
+        return logins
 
     @staticmethod
     def _decrypt_windows_chromium(value, encrypted_value):
@@ -492,12 +523,21 @@ class ChromiumBased:
 
 class Chrome(ChromiumBased):
     """Class for Google Chrome"""
-    def __init__(self, cookie_file=None, domain_name="", key_file=None):
+    def __init__(self, cookie_file=None, domain_name="", key_file=None, login_file=None):
         args = {
             'linux_cookies': _genarate_nix_paths_chromium(
                 [
                     '~/.config/google-chrome{channel}/Default/Cookies',
                     '~/.config/google-chrome{channel}/Profile */Cookies'
+                ],
+                channel=['', '-beta', '-unstable']
+            ),
+            'linux_logins': _genarate_nix_paths_chromium(
+                [
+                    '~/.config/google-chrome{channel}/Default/Login Data For Account',
+                    '~/.config/google-chrome{channel}/Profile */Login Data For Account',
+                    '~/.config/google-chrome{channel}/Default/Login Data',
+                    '~/.config/google-chrome{channel}/Profile */Login Data'
                 ],
                 channel=['', '-beta', '-unstable']
             ),
@@ -525,16 +565,20 @@ class Chrome(ChromiumBased):
             'osx_key_service' : 'Chrome Safe Storage',
             'osx_key_user' : 'Chrome'
         }
-        super().__init__(browser='Chrome', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
+        super().__init__(browser='Chrome', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, login_file=login_file, **args)
 
 
 class Chromium(ChromiumBased):
     """Class for Chromium"""
-    def __init__(self, cookie_file=None, domain_name="", key_file=None):
+    def __init__(self, cookie_file=None, domain_name="", key_file=None, login_file=None):
         args = {
             'linux_cookies':[
                 '~/.config/chromium/Default/Cookies',
                 '~/.config/chromium/Profile */Cookies'
+            ],
+            'linux_logins':[
+                '~/.config/chromium/Default/Login Data',
+                '~/.config/chromium/Profile */Login Data'
             ],
             'windows_cookies': _genarate_win_paths_chromium(
                 [
@@ -555,7 +599,7 @@ class Chromium(ChromiumBased):
             'osx_key_service' : 'Chromium Safe Storage',
             'osx_key_user' : 'Chromium'
         }
-        super().__init__(browser='Chromium', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
+        super().__init__(browser='Chromium', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, login_file=login_file, **args)
 
 
 class Opera(ChromiumBased):
@@ -723,22 +767,15 @@ class Vivaldi(ChromiumBased):
 
 class Firefox:
     """Class for Firefox"""
-    def __init__(self, cookie_file=None, domain_name=""):
-        self.tmp_cookie_file = None
-        cookie_file = cookie_file or self.find_cookie_file()
-        self.tmp_cookie_file = _create_local_copy(cookie_file)
+    def __init__(self, cookie_file=None, domain_name="", key_file=None, login_file=None):
+        self.cookie_file = cookie_file or self.find_cookie_file()
         # current sessions are saved in sessionstore.js
         self.session_file = os.path.join(
-            os.path.dirname(cookie_file), 'sessionstore.js')
+            os.path.dirname(self.cookie_file), 'sessionstore.js')
         self.session_file_lz4 = os.path.join(os.path.dirname(
-            cookie_file), 'sessionstore-backups', 'recovery.jsonlz4')
+            self.cookie_file), 'sessionstore-backups', 'recovery.jsonlz4')
         # domain name to filter cookies by
         self.domain_name = domain_name
-
-    def __del__(self):
-        # remove temporary backup of sqlite cookie database
-        if self.tmp_cookie_file:
-            os.remove(self.tmp_cookie_file)
 
     def __str__(self):
         return 'firefox'
@@ -844,7 +881,7 @@ class Firefox:
                     cj.set_cookie(Firefox.__create_session_cookie(cookie))
 
     def load(self):
-        con = sqlite3.connect(self.tmp_cookie_file)
+        con = _sqlite3_connect_readonly(self.cookie_file)
         cur = con.cursor()
         cur.execute('select host, path, isSecure, expiry, name, value, isHttpOnly from moz_cookies '
                     'where host like ?', ('%{}%'.format(self.domain_name),))
@@ -860,6 +897,9 @@ class Firefox:
         self.__add_session_cookies_lz4(cj)
 
         return cj
+
+    def load_logins(self):
+        raise NotImplementedError('Loading login credentials is not yet supported for Firefox')
 
 
 class Safari:
@@ -977,6 +1017,9 @@ class Safari:
         return cj
 
 
+LoginCredential = namedtuple('LoginCredential', 'host path username password accessed created modified secure times_used')
+
+
 def create_cookie(host, path, secure, expires, name, value, http_only):
     """Shortcut function to create a cookie"""
     # HTTPOnly flag goes in _rest, if present (see https://github.com/python/cpython/pull/17471/files#r511187060)
@@ -1044,18 +1087,35 @@ def safari(cookie_file=None, domain_name=""):
     """
     return Safari(cookie_file, domain_name).load()
 
+
+all_browsers = [Chrome, Chromium, Opera, OperaGX, Brave, Edge, Vivaldi, Firefox, Safari]
+
+
 def load(domain_name=""):
     """Try to load cookies from all supported browsers and return combined cookiejar
     Optionally pass in a domain name to only load cookies from the specified domain
     """
     cj = http.cookiejar.CookieJar()
-    for cookie_fn in [chrome, chromium, opera, opera_gx, brave, edge, vivaldi, firefox, safari]:
+    for browser in all_browsers:
         try:
-            for cookie in cookie_fn(domain_name=domain_name):
+            for cookie in browser(domain_name=domain_name).load():
                 cj.set_cookie(cookie)
         except BrowserCookieError:
             pass
     return cj
+
+
+def load_logins(domain_name=""):
+    """Try to load login credentials from all supported browsers and return combined list
+    Optionally pass in a domain name to only load login credentials from the specified domain
+    """
+    logins = []
+    for browser in all_browsers:
+        try:
+            logins.extend(browser(domain_name=domain_name).load_logins())
+        except (BrowserCookieError, NotImplementedError):
+            pass
+    return logins
 
 
 if __name__ == '__main__':
