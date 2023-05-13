@@ -909,7 +909,33 @@ class Firefox:
         return cj
 
     def load_logins(self):
-        raise NotImplementedError('Loading login credentials is not yet supported for Firefox')
+        """Load saved login credentials into a dictionary"""
+        if not self.login_file:
+            raise BrowserCookieError(f'{self.browser} saved logins file not found, or not yet implemented')
+
+        with open(self.login_file) as lf:
+            lj = json.load(lf)
+            version = lj.get('version', 'unknown')
+            if version != 3:
+                raise BrowserCookieError(f'{self.browser} logins file has version {version!r}, rather than expected 3')
+
+            logins = []
+            for item in lj['logins']:
+                p = urlsplit(item['hostname'])
+                username_enc = item['encryptedUsername']
+                password_enc = item['encryptedPassword']
+                # FIXME: Need to decrypt in the manner of https://github.com/lclevy/firepwd/blob/master/firepwd.py
+                username, password = username_enc, password_enc
+                logins.append(LoginCredential(
+                    host=p.netloc, path=p.path if p.path not in ('', None, '/') else None,
+                    username=username, password=password,
+                    accessed=item['timeLastUsed'] / 1000,
+                    created=item['timeCreated'] / 1000,
+                    modified=item['timePasswordChanged'] / 1000,
+                    times_used=item['timeUsed'],
+                    secure=(p.scheme == 'https'),
+                ))
+            return logins
 
 
 class Safari:
