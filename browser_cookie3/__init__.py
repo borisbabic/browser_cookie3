@@ -772,7 +772,8 @@ class Vivaldi(ChromiumBased):
 class Firefox:
     """Class for Firefox"""
     def __init__(self, cookie_file=None, domain_name="", key_file=None, login_file=None):
-        self.cookie_file = cookie_file or self.find_cookie_file()
+        self.cookie_file = cookie_file or self.find_file('cookies.sqlite')
+        self.login_file = login_file or self.find_file('logins.json')
         # current sessions are saved in sessionstore.js
         self.session_file = os.path.join(
             os.path.dirname(self.cookie_file), 'sessionstore.js')
@@ -815,17 +816,17 @@ class Firefox:
         return fallback_path
 
     @staticmethod
-    def find_cookie_file():
-        cookie_files = []
+    def find_file(basename: str):
+        found_files = []
 
         if sys.platform == 'darwin':
             user_data_path = os.path.expanduser(
                 '~/Library/Application Support/Firefox')
         elif sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
-            # Looking for cookies from a Snap based Firefox first, as some
+            # Looking for files from a Snap based Firefox first, as some
             # users might have profiles at both this and the other location,
             # as they were migrated to Snap by their OS at some point, leaving
-            # cookies at the other location outdated.
+            # files at the other location outdated.
             general_path = os.path.expanduser('~/snap/firefox/common/.mozilla/firefox')
             if os.path.isdir(general_path):
                 user_data_path = general_path
@@ -835,19 +836,19 @@ class Firefox:
             user_data_path = os.path.join(
                 os.environ.get('APPDATA'), 'Mozilla', 'Firefox')
             # legacy firefox <68 fallback
-            cookie_files = glob.glob(os.path.join(os.environ.get('PROGRAMFILES'), 'Mozilla Firefox', 'profile', 'cookies.sqlite')) \
-                or glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)'), 'Mozilla Firefox', 'profile', 'cookies.sqlite'))
+            found_files = glob.glob(os.path.join(os.environ.get('PROGRAMFILES'), 'Mozilla Firefox', 'profile', basename)) \
+                or glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)'), 'Mozilla Firefox', 'profile', basename))
         else:
             raise BrowserCookieError(
                 'Unsupported operating system: ' + sys.platform)
 
-        cookie_files = glob.glob(os.path.join(Firefox.get_default_profile(user_data_path), 'cookies.sqlite')) \
-            or cookie_files
+        found_files = glob.glob(os.path.join(Firefox.get_default_profile(user_data_path), basename)) \
+            or found_files
 
-        if cookie_files:
-            return cookie_files[0]
+        if found_files:
+            return found_files[0]
         else:
-            raise BrowserCookieError('Failed to find Firefox cookie file')
+            raise BrowserCookieError(f'Failed to find Firefox files matching {basename!r}')
 
     @staticmethod
     def __create_session_cookie(cookie_json):
