@@ -7,11 +7,13 @@ import glob
 import http.cookiejar
 import json
 import os
+import shutil
 import struct
 import subprocess
 import sys
 from io import BytesIO
 from pathlib import Path
+import tempfile
 from typing import Union
 
 import sqlite3
@@ -136,20 +138,6 @@ def _expand_paths_impl(paths:list, os_name:str):
 
 def _expand_paths(paths:list, os_name:str):
     return next(_expand_paths_impl(paths, os_name), None)
-
-
-def _sqlite3_connect_readonly(path):
-    uri = Path(path).absolute().as_uri()
-    ex = None
-    for options in ('?mode=ro', '?mode=ro&nolock=1'):
-        con = sqlite3.connect(uri + options, uri=True)
-        try:
-            con.cursor().execute('select 1 from sqlite_master')
-        except sqlite3.OperationalError as e:
-            ex = e
-        else:
-            return con
-    raise ex
 
 
 def _normalize_genarate_paths_chromium(paths:Union[str,list], channel:Union[str,list]=None):
@@ -315,6 +303,68 @@ class _LinuxPasswordManager:
             return password.encode('utf-8')
 
 
+class _DatabaseConnetion():
+    def __init__(self, database_file: os.PathLike, try_legacy_first: bool = False):
+        self.__database_file = database_file
+        self.__temp_cookie_file = None
+        self.__connection = None
+        self.__methods = [
+            self.__sqlite3_connect_readonly,
+            self.__get_connection_legacy,
+        ]
+        if try_legacy_first:
+            self.__methods.reverse()
+    
+    def __enter__(self):
+        return self.get_connection()
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def __check_connection_ok(self, connection):
+        try:
+            connection.cursor().execute('select 1 from sqlite_master')
+            return True
+        except sqlite3.OperationalError as e:
+            return False        
+
+    def __sqlite3_connect_readonly(self):
+        uri = Path(self.__database_file).absolute().as_uri()
+        for options in ('?mode=ro', '?mode=ro&nolock=1'):
+            con = sqlite3.connect(uri + options, uri=True)
+            if self.__check_connection_ok(con):
+                return con
+
+    def __get_connection_legacy(self):
+        self.__temp_cookie_file = tempfile.NamedTemporaryFile(suffix='.sqlite').name
+        shutil.copyfile(self.__database_file, self.__temp_cookie_file)
+        con = sqlite3.connect(self.__temp_cookie_file)
+        if self.__check_connection_ok(con):
+            return con
+
+    def get_connection(self):
+        if self.__connection:
+            return self.__connection
+        for method in self.__methods:
+            con = method()
+            if con is not None:
+                self.__connection = con
+                return con
+        raise BrowserCookieError('Unable to read database file')
+
+    def cursor(self):
+        return self.connection().cursor()
+
+    def close(self):
+        if self.__connection:
+            self.__connection.close()
+        if self.__temp_cookie_file:
+            try:
+                os.remove(self.__temp_cookie_file)
+            except:
+                pass
+
+
 class ChromiumBased:
     """Super class for all Chromium based browsers"""
 
@@ -345,6 +395,11 @@ class ChromiumBased:
             iterations = 1
             self.v10_key = PBKDF2(CHROMIUM_DEFAULT_PASSWORD, self.salt, self.length, iterations)
             self.v11_key = PBKDF2(password, self.salt, self.length, iterations)
+
+            # Due to a bug in previous version of chromium,
+            # the key used to encrypt the cookies in some linux systems was empty
+            # After the bug was fixed, old cookies are still encrypted with an empty key
+            self.v11_empty_key = PBKDF2(b'', self.salt, self.length, iterations)
 
             cookie_file = self.cookie_file or _expand_paths(linux_cookies, 'linux')
 
@@ -384,37 +439,36 @@ class ChromiumBased:
 
     def load(self):
         """Load sqlite cookies into a cookiejar"""
-        con = _sqlite3_connect_readonly(self.cookie_file)
-        con.text_factory = _text_factory
-        cur = con.cursor()
-        try:
-            # chrome <=55
-            cur.execute('SELECT host_key, path, secure, expires_utc, name, value, encrypted_value, is_httponly '
-                        'FROM cookies WHERE host_key like ?;', ('%{}%'.format(self.domain_name),))
-        except sqlite3.OperationalError:
-            # chrome >=56
-            cur.execute('SELECT host_key, path, is_secure, expires_utc, name, value, encrypted_value, is_httponly '
-                        'FROM cookies WHERE host_key like ?;', ('%{}%'.format(self.domain_name),))
-
         cj = http.cookiejar.CookieJar()
+        
+        with _DatabaseConnetion(self.cookie_file) as con:
+            con.text_factory = _text_factory
+            cur = con.cursor()
+            try:
+                # chrome <=55
+                cur.execute('SELECT host_key, path, secure, expires_utc, name, value, encrypted_value, is_httponly '
+                            'FROM cookies WHERE host_key like ?;', ('%{}%'.format(self.domain_name),))
+            except sqlite3.OperationalError:
+                # chrome >=56
+                cur.execute('SELECT host_key, path, is_secure, expires_utc, name, value, encrypted_value, is_httponly '
+                            'FROM cookies WHERE host_key like ?;', ('%{}%'.format(self.domain_name),))
 
-        for item in cur.fetchall():
-            # Per https://github.com/chromium/chromium/blob/main/base/time/time.h#L5-L7,
-            # Chromium-based browsers store cookies' expiration timestamps as MICROSECONDS elapsed
-            # since the Windows NT epoch (1601-01-01 0:00:00 GMT), or 0 for session cookies.
-            #
-            # http.cookiejar stores cookies' expiration timestamps as SECONDS since the Unix epoch
-            # (1970-01-01 0:00:00 GMT, or None for session cookies.
-            host, path, secure, expires_nt_time_epoch, name, value, enc_value, http_only = item
-            if (expires_nt_time_epoch == 0):
-                expires = None
-            else:
-                expires = (expires_nt_time_epoch / 1000000) - self.UNIX_TO_NT_EPOCH_OFFSET
+            for item in cur.fetchall():
+                # Per https://github.com/chromium/chromium/blob/main/base/time/time.h#L5-L7,
+                # Chromium-based browsers store cookies' expiration timestamps as MICROSECONDS elapsed
+                # since the Windows NT epoch (1601-01-01 0:00:00 GMT), or 0 for session cookies.
+                #
+                # http.cookiejar stores cookies' expiration timestamps as SECONDS since the Unix epoch
+                # (1970-01-01 0:00:00 GMT, or None for session cookies.
+                host, path, secure, expires_nt_time_epoch, name, value, enc_value, http_only = item
+                if (expires_nt_time_epoch == 0):
+                    expires = None
+                else:
+                    expires = (expires_nt_time_epoch / 1000000) - self.UNIX_TO_NT_EPOCH_OFFSET
 
-            value = self._decrypt(value, enc_value)
-            c = create_cookie(host, path, secure, expires, name, value, http_only)
-            cj.set_cookie(c)
-        con.close()
+                value = self._decrypt(value, enc_value)
+                c = create_cookie(host, path, secure, expires, name, value, http_only)
+                cj.set_cookie(c)
         return cj
 
     @staticmethod
@@ -465,18 +519,20 @@ class ChromiumBased:
         # components/os_crypt/os_crypt_linux.cc
         if not hasattr(self, 'v11_key'):
             assert encrypted_value[:3] != b'v11', "v11 keys should only appear on Linux."
-        key = self.v11_key if encrypted_value[:3] == b'v11' else self.v10_key
+        keys = (self.v11_key, self.v11_empty_key) if encrypted_value[:3] == b'v11' else (self.v10_key,)
         encrypted_value = encrypted_value[3:]
-        cipher = AES.new(key, AES.MODE_CBC, self.iv)
+        
+        for key in keys:
+            cipher = AES.new(key, AES.MODE_CBC, self.iv)
 
-        # will rise Value Error: invalid padding byte if the key is wrong,
-        # probably we did not got the key and used peanuts
-        try:
-            decrypted = unpad(cipher.decrypt(encrypted_value), AES.block_size)
-        except ValueError:
-            raise BrowserCookieError('Unable to get key for cookie decryption')
-        return decrypted.decode('utf-8')
-
+            # will rise Value Error: invalid padding byte if the key is wrong,
+            # probably we did not got the key and used peanuts
+            try:
+                decrypted = unpad(cipher.decrypt(encrypted_value), AES.block_size)
+                return decrypted.decode('utf-8')
+            except ValueError:
+                pass
+        raise BrowserCookieError('Unable to get key for cookie decryption')
 
 class Chrome(ChromiumBased):
     """Class for Google Chrome"""
@@ -825,17 +881,16 @@ class Firefox:
                     cj.set_cookie(Firefox.__create_session_cookie(cookie))
 
     def load(self):
-        con = _sqlite3_connect_readonly(self.cookie_file)
-        cur = con.cursor()
-        cur.execute('select host, path, isSecure, expiry, name, value, isHttpOnly from moz_cookies '
+        cj = http.cookiejar.CookieJar()
+        with _DatabaseConnetion(self.cookie_file, True) as con: # firefox seems faster with legacy mode
+            cur = con.cursor()
+            cur.execute('select host, path, isSecure, expiry, name, value, isHttpOnly from moz_cookies '
                     'where host like ?', ('%{}%'.format(self.domain_name),))
 
-        cj = http.cookiejar.CookieJar()
-        for item in cur.fetchall():
-            host, path, secure, expires, name, value, http_only = item
-            c = create_cookie(host, path, secure, expires, name, value, http_only)
-            cj.set_cookie(c)
-        con.close()
+            for item in cur.fetchall():
+                host, path, secure, expires, name, value, http_only = item
+                c = create_cookie(host, path, secure, expires, name, value, http_only)
+                cj.set_cookie(c)
 
         self.__add_session_cookies(cj)
         self.__add_session_cookies_lz4(cj)
