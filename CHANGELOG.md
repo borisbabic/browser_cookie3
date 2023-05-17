@@ -1,3 +1,8 @@
+### 0.18.1
+- [FIREFOX] Fixed Firefox database read error on linux and macOS
+- [MODULE] Fixed read for empty password encrypted cookies on Chromium based browsers
+### 0.18.0
+- [MODULE] Removed legacy imports and code improvements
 ### 0.17.1
 - [MODULE] Fixed when no password storage is provided by any service on linux
 - [MODULE] Fixed dbus related error on linux
