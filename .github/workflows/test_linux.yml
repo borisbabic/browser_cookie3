@@ -45,13 +45,15 @@ jobs:
 
           sudo apt update
           #sudo apt install -y google-chrome-stable chromium-browser opera-stable brave-browser microsoft-edge-stable vivaldi-stable firefox libsecret-tools
-          sudo apt install -y opera-stable
+          sudo apt install -y vivaldi-stable
 
       - name: Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r tests/test-requirements.txt
+      - name: Set Environment Variables
+        run: |
+          echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> "$GITHUB_ENV"
       - name: Run Tests
         run: |
-          echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> $GITHUB_ENV
           python -m unittest -v
