@@ -78,14 +78,14 @@ class Test(unittest.TestCase):
         
         self.driver = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=options)
     
-    def __test_browser(self, browser_func, cookies_path=None):
+    def __test_browser(self, browser_func, cookies_path=None, wait_seconds=5):
         for url in GO_TO_URLS:
             self.driver.get(url)
             self.driver.implicitly_wait(10)
         
         self.assertGreaterEqual(len(browser_func(cookies_path)), 0)
         self.driver.quit()
-        time.sleep(5) # wait for the browser to quit completely
+        time.sleep(wait_seconds) # wait for the browser to quit completely
         self.assertGreater(len(browser_func(cookies_path)), 0)
 
     def __setup_chromium_based(self, chrome_type, binary_location, driver_version=None):
@@ -134,7 +134,7 @@ class Test(unittest.TestCase):
     
     def test_opera(self):
         self.__setup_chromium_based(ChromeType.GOOGLE, self.__binary_location.get(BrowserName.OPERA))
-        self.__test_browser(opera, os.path.join(self.__get_data_dir(), 'Cookies'))
+        self.__test_browser(opera, os.path.join(self.__get_data_dir(), 'Cookies'), wait_seconds=15)
     
     def test_vivaldi(self):
         driver_version = get_driver_version_from_chromium_based_binary('/usr/bin/vivaldi-stable')

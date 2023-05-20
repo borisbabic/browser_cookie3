@@ -52,7 +52,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r tests/test-requirements.txt
       - name: Run Tests
-        env:
-          DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/$(id -u)/bus"
         run: |
+          echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> $GITHUB_ENV
           python -m unittest -v
