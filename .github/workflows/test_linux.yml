@@ -21,6 +21,7 @@ jobs:
           DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/$(id -u)/bus"
         run: |
           mkdir -p ~/Downloads
+          pstree
           # sudo apt update
           # sudo apt upgrade -y
 
@@ -45,7 +46,8 @@ jobs:
           echo "deb [signed-by=/usr/share/keyrings/vivaldi-archive-keyring.gpg] https://repo.vivaldi.com/archive/deb/ stable main" | sudo tee /etc/apt/sources.list.d/vivaldi.list
 
           sudo apt update
-          sudo apt install -y google-chrome-stable chromium-browser opera-stable brave-browser microsoft-edge-stable vivaldi-stable firefox libsecret-tools
+          #sudo apt install -y google-chrome-stable chromium-browser opera-stable brave-browser microsoft-edge-stable vivaldi-stable firefox libsecret-tools
+          sudo apt install -y opera-stable
 
       - name: Install Python Dependencies
         run: |

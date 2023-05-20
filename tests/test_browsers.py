@@ -37,6 +37,8 @@ class Test(unittest.TestCase):
             print('Running headless in GitHub Actions')
         else:
             self.__headless = False
+        print(os.environ)
+        os.environ['DBUS_SESSION_BUS_ADDRESS'] = f'unix:path=/run/user/{os.getuid()}/bus'
         super().__init__(*args, **kwargs)
 
     def setUp(self) -> None:
