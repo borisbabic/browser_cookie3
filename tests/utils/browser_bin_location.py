@@ -42,7 +42,8 @@ LOCATIONS = {
 }
 
 class BinaryLocation:
-    def __init__(self):
+    def __init__(self, raise_not_found=False):
+        self.__raise_not_found = raise_not_found
         if sys.platform == 'darwin':
             self.__os = 'macos'
         elif sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
@@ -56,3 +57,5 @@ class BinaryLocation:
         for i in LOCATIONS[browser][self.__os]:
             if os.path.exists(i):
                 return i
+        if self.__raise_not_found:
+            raise FileNotFoundError('browser not found')

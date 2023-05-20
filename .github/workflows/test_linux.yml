@@ -17,8 +17,6 @@ jobs:
         with:
           python-version: 3.11
       - name: Install Browsers and Linux Dependencies
-        env:
-          DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/$(id -u)/bus"
         run: |
           mkdir -p ~/Downloads
           pstree
@@ -54,5 +52,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r tests/test-requirements.txt
       - name: Run Tests
+        env:
+          DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/$(id -u)/bus"
         run: |
           python -m unittest -v

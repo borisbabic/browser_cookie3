@@ -30,7 +30,6 @@ GO_TO_URLS = ['https://google.com', 'https://facebook.com', 'https://aka.ms']
 class Test(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         self.__temp_dir = tempfile.mktemp(prefix='browser_cookie3_test_')
-        self.__binary_location = BinaryLocation()
         self.__is_github_actions = not not os.environ.get('GITHUB_ACTIONS', False)
         if self.__is_github_actions:
             self.__headless = True
@@ -38,6 +37,7 @@ class Test(unittest.TestCase):
         else:
             self.__headless = False
         print(os.environ)
+        self.__binary_location = BinaryLocation(raise_not_found=self.__is_github_actions)
         os.environ['DBUS_SESSION_BUS_ADDRESS'] = f'unix:path=/run/user/{os.getuid()}/bus'
         super().__init__(*args, **kwargs)
 
