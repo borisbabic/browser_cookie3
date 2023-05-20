@@ -19,9 +19,8 @@ jobs:
       - name: Install Browsers and Linux Dependencies
         run: |
           mkdir -p ~/Downloads
-          pstree
-          # sudo apt update
-          # sudo apt upgrade -y
+          sudo apt update
+          sudo apt upgrade -y
 
           echo "Setting up Chrome"
           curl -fsSL https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor | sudo tee /usr/share/keyrings/google-archive-keyring.gpg > /dev/null
@@ -44,8 +43,7 @@ jobs:
           echo "deb [signed-by=/usr/share/keyrings/vivaldi-archive-keyring.gpg] https://repo.vivaldi.com/archive/deb/ stable main" | sudo tee /etc/apt/sources.list.d/vivaldi.list
 
           sudo apt update
-          #sudo apt install -y google-chrome-stable chromium-browser opera-stable brave-browser microsoft-edge-stable vivaldi-stable firefox libsecret-tools
-          sudo apt install -y vivaldi-stable
+          sudo apt install -y google-chrome-stable chromium-browser opera-stable brave-browser microsoft-edge-stable vivaldi-stable firefox libsecret-tools
 
       - name: Install Python Dependencies
         run: |

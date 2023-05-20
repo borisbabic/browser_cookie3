@@ -28,18 +28,16 @@ GO_TO_URLS = ['https://google.com', 'https://facebook.com', 'https://aka.ms']
 
 
 class Test(unittest.TestCase):
-    def __init__(self, *args, **kwargs):
-        self.__temp_dir = tempfile.mktemp(prefix='browser_cookie3_test_')
-        self.__is_github_actions = not not os.environ.get('GITHUB_ACTIONS', False)
-        if self.__is_github_actions:
-            self.__headless = True
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.__temp_dir = tempfile.mktemp(prefix='browser_cookie3_test_')
+        cls.__is_github_actions = not not os.environ.get('GITHUB_ACTIONS', False)
+        if cls.__is_github_actions:
+            cls.__headless = True
             print('Running headless in GitHub Actions')
         else:
-            self.__headless = False
-        print(os.environ)
-        self.__binary_location = BinaryLocation(raise_not_found=self.__is_github_actions)
-        os.environ['DBUS_SESSION_BUS_ADDRESS'] = f'unix:path=/run/user/{os.getuid()}/bus'
-        super().__init__(*args, **kwargs)
+            cls.__headless = not not os.environ.get('RUN_HEADLESS', False)
+        cls.__binary_location = BinaryLocation(raise_not_found=cls.__is_github_actions)
 
     def setUp(self) -> None:
         os.mkdir(self.__temp_dir)
