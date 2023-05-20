@@ -331,7 +331,10 @@ class _DatabaseConnetion():
     def __sqlite3_connect_readonly(self):
         uri = Path(self.__database_file).absolute().as_uri()
         for options in ('?mode=ro', '?mode=ro&nolock=1'):
-            con = sqlite3.connect(uri + options, uri=True)
+            try:
+                con = sqlite3.connect(uri + options, uri=True)
+            except sqlite3.OperationalError:
+                continue
             if self.__check_connection_ok(con):
                 return con
 
@@ -856,8 +859,7 @@ class Firefox:
         if not os.path.exists(self.session_file):
             return
         try:
-            json_data = json.loads(
-                open(self.session_file, 'rb').read().decode())
+            json_data = json.load(self.session_file)
         except ValueError as e:
             print('Error parsing firefox session JSON:', str(e))
         else:
@@ -870,9 +872,9 @@ class Firefox:
         if not os.path.exists(self.session_file_lz4):
             return
         try:
-            file_obj = open(self.session_file_lz4, 'rb')
-            file_obj.read(8)
-            json_data = json.loads(lz4.block.decompress(file_obj.read()))
+            with open(self.session_file_lz4, 'rb') as file_obj:
+                file_obj.read(8)
+                json_data = json.loads(lz4.block.decompress(file_obj.read()))
         except ValueError as e:
             print('Error parsing firefox session JSON LZ4:', str(e))
         else:
