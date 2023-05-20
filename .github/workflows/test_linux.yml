@@ -55,5 +55,7 @@ jobs:
         run: |
           echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> "$GITHUB_ENV"
       - name: Run Tests
+        env:
+          DBUS_SESSION_BUS_ADDRESS: "${{ env.DBUS_SESSION_BUS_ADDRESS }}"
         run: |
           python -m unittest -v
