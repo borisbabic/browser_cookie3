@@ -290,7 +290,9 @@ class _LinuxPasswordManager:
             _, _, secret, _ = connection.call_method('GetSecrets', 'aoo', [object_path], session)[object_path]
             return secret
 
-    def __get_kdewallet_password_jeepney(self, folder, key):
+    def __get_kdewallet_password_jeepney(self, os_crypt_name):
+        folder = f'{os_crypt_name.capitalize()} Keys'
+        key = f'{os_crypt_name.capitalize()} Safe Storage'
         with _JeepneyConnection('/modules/kwalletd5', 'org.kde.kwalletd5', 'org.kde.KWallet') as connection:
             network_wallet = connection.call_method('networkWallet')
             handle = connection.call_method('open', 'sxs', network_wallet, 0, self._APP_ID)
