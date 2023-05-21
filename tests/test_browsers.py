@@ -18,14 +18,14 @@ from webdriver_manager.microsoft import EdgeChromiumDriverManager
 from webdriver_manager.core.utils import ChromeType
 
 from .utils.driver_version import get_driver_version_from_chromium_based_binary
-from .utils.browser_bin_location import BinaryLocation
+from .utils.browser_paths import BinaryLocation
 from .utils import BrowserName
 
 from __init__ import chrome, chromium, opera, brave, edge, vivaldi, firefox
 
 FIREFOX_PROFILE_DIR_TAR_XZ_B64 = '/Td6WFoAAATm1rRGAgAhARYAAAB0L+Wj4Cf/Ab9dADKeCtBB2uo3WZXNf0LmOYhU+/uDA4UuA4WFok+rSGo77xLonlTJRZVUflBOJqwKkKSdaAqhwGEKuBBQPUhhAnLAtEoZDYIZr/+NtA7qmJUYLdsVeR6Wl7WxZbXKiZGGvRIikC0hq43rbn1Yqg9Np1jaN2SAN9nJ+dbdaiRN41M1dNay8kvuJQN82yhVO60WIPevkpqDyk9e6znR/txuyHxu/+CbWOpjVKK0Za4lt3Q4lSoqMjQsyOotQb+PG2xm8gUMIe+oz+95CoHCPsjkgPQwsE9nZ6Va1k1Ao5kgxs7BM5Zc1gJaAeITfxmzI8Z9jmimHExXDoIayhbg+IaENPO40nuioZvaPnRYKU2giDaqKbeMbfgru1OAQqGHJjtHtluCO6g9BddV6w3w2eseL2L/5ftFlv84//BRoqSe60dlPPf6k9FunUY7nE1DrErvms34C8C5ijJy/w6HyQszlbUrUGhcPzlqcWSbx/qVcdynh0RazPq7bnOcSpdRTOKWDNDCo1YWARi5kzCVYhB3nPpFj35fuIWHWfg4JBz6h69RHe7H06SVat4foed/oKNmocM5tuAtFyzqIumE2BbAAAAAYT2+VFTQ6AsAAdsDgFAAAGra6X2xxGf7AgAAAAAEWVo='
 FIREFOX_PROFILE_DIR_NAME = '4xutesqi.default-release'
-GO_TO_URLS = ['https://google.com', 'https://facebook.com', 'https://temp-mail.org/en/']
+GO_TO_URLS = ['https://google.com', 'https://facebook.com', 'https://aka.ms', 'https://amazon.com']
 
 
 class Test(unittest.TestCase):
@@ -54,17 +54,14 @@ class Test(unittest.TestCase):
         return data_dir
 
     def __wait_for_cookies_to_be_detected(self, browser_func, cookies_path, timeout):
-        start_time = time.time()
-        end_time = start_time + timeout
+        end_time = time.time() + timeout
         while time.time() < end_time:
             if len(browser_func(cookies_path)) > 0:
                 return
-            if self.__is_github_actions:
-                print(f'Waiting for cookies to be detected... {time.time() - start_time:.2f}s')
             time.sleep(1)
 
     def __setup_firefox(self):
-        mozilla_dir = os.path.expanduser('~/.mozilla')
+        mozilla_dir = os.path.join(self.__temp_dir, '.mozilla')
         if os.path.exists(mozilla_dir):
             raise Exception(f'{mozilla_dir} already exists')
         os.mkdir(mozilla_dir)
@@ -144,8 +141,9 @@ class Test(unittest.TestCase):
     
     def test_firefox(self):
         self.__setup_firefox()
-        self.__test_browser(firefox)
-    
+        cookie_path = os.path.join(self.__temp_dir, '.mozilla', 'firefox', FIREFOX_PROFILE_DIR_NAME, 'cookies.sqlite')
+        self.__test_browser(firefox, cookie_path)
+
     def test_opera(self):
         self.__setup_chromium_based(ChromeType.GOOGLE, self.__binary_location.get(BrowserName.OPERA))
         self.__test_browser(opera, os.path.join(self.__get_data_dir(), 'Cookies'))

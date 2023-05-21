@@ -3,7 +3,7 @@ import os
 
 from . import BrowserName
 
-LOCATIONS = {
+BIN_LOCATIONS = {
     BrowserName.CHROME: {
         'linux': ['/usr/bin/google-chrome-stable'],
         'windows': ['C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'], # Not tested
@@ -54,7 +54,7 @@ class BinaryLocation:
             raise ValueError('unsupported os')
     
     def get(self, browser:str) -> str:
-        for i in LOCATIONS[browser][self.__os]:
+        for i in BIN_LOCATIONS[browser][self.__os]:
             if os.path.exists(i):
                 return i
         if self.__raise_not_found:
