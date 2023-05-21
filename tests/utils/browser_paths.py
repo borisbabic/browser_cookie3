@@ -21,7 +21,8 @@ BIN_LOCATIONS = {
         'linux': ['/usr/bin/brave', '/usr/bin/brave-browser'],
         'windows': [
             r'C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe',
-            r'C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe'
+            r'C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe',
+            rf'C:\Users\{os.getlogin()}\AppData\Local\BraveSoftware\Brave-Browser-Beta\Application\brave.exe'
         ],
         'macos': ['/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'] # Not tested
     },
