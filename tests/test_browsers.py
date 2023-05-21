@@ -60,7 +60,6 @@ class Test(unittest.TestCase):
             if len(browser_func(cookies_path)) > 0:
                 return
             time.sleep(0.5)
-        time.sleep(timeout)
 
     def __setup_firefox(self):
         mozilla_dir = os.path.expanduser('~/.mozilla')
@@ -106,9 +105,9 @@ class Test(unittest.TestCase):
             options.add_argument('--disable-gpu')
         self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager(version=driver_version,chrome_type=chrome_type).install()), options=options)
 
-    def __test_chromium_based(self, browser_func):
+    def __test_chromium_based(self, browser_func, wait_seconds=15):
         cookies_path = os.path.join(self.__get_data_dir(), 'Default', 'Cookies')
-        self.__test_browser(browser_func, cookies_path)
+        self.__test_browser(browser_func, cookies_path, wait_seconds)
        
     def __setup_edge(self):
         options = webdriver.EdgeOptions()
@@ -148,7 +147,7 @@ class Test(unittest.TestCase):
     def test_vivaldi(self):
         driver_version = get_driver_version_from_chromium_based_binary('/usr/bin/vivaldi-stable')
         self.__setup_chromium_based(ChromeType.GOOGLE, self.__binary_location.get(BrowserName.VIVALDI), driver_version)
-        self.__test_chromium_based(vivaldi)
+        self.__test_chromium_based(vivaldi, wait_seconds=45)
 
 
 if __name__ == '__main__':
