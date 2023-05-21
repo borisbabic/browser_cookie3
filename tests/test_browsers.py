@@ -36,9 +36,10 @@ class Test(unittest.TestCase):
         cls.__is_github_actions = not not os.environ.get('GITHUB_ACTIONS', False)
         if cls.__is_github_actions:
             cls.__headless = True
-            print('Running headless in GitHub Actions')
         else:
             cls.__headless = not not os.environ.get('RUN_HEADLESS', False)
+        if cls.__headless:
+            print('Running headless')
         cls.__binary_location = BinaryLocation(raise_not_found=cls.__is_github_actions)
 
     def setUp(self) -> None:
@@ -59,6 +60,7 @@ class Test(unittest.TestCase):
             if len(browser_func(cookies_path)) > 0:
                 return
             time.sleep(0.5)
+        time.sleep(timeout)
 
     def __setup_firefox(self):
         mozilla_dir = os.path.expanduser('~/.mozilla')
@@ -82,6 +84,7 @@ class Test(unittest.TestCase):
         if self.__headless:
             options.add_argument('--headless')
             options.add_argument('--disable-gpu')
+            options.add_argument('--no-sandbox')
         
         self.driver = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=options)
     

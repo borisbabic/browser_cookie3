@@ -18,10 +18,8 @@ jobs:
           python-version: 3.11
       - name: Install Browsers and Linux Dependencies
         run: |
-          mkdir -p ~/Downloads
-          sudo apt update
-          sudo apt upgrade -y
-
+          ls -la ~/.config
+          ls -la ~
           echo "Setting up Chrome"
           curl -fsSL https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor | sudo tee /usr/share/keyrings/google-archive-keyring.gpg > /dev/null
           echo "deb [signed-by=/usr/share/keyrings/google-archive-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
