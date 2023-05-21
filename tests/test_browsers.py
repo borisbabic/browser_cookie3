@@ -16,6 +16,8 @@ from webdriver_manager.firefox import GeckoDriverManager
 from webdriver_manager.microsoft import EdgeChromiumDriverManager
 from webdriver_manager.core.utils import ChromeType
 
+from urllib3.exceptions import MaxRetryError, NewConnectionError
+
 from .utils.driver_version import get_driver_version_from_chromium_based_binary
 from .utils.browser_bin_location import BinaryLocation
 from .utils import BrowserName
@@ -50,7 +52,14 @@ class Test(unittest.TestCase):
     def __get_data_dir(self):
         data_dir = os.path.join(self.__temp_dir, self._testMethodName)
         return data_dir
-        
+
+    def __wait_for_cookies_to_be_deleted(self, browser_func, cookies_path, timeout):
+        end_time = time.time() + timeout
+        while time.time() < end_time:
+            if len(browser_func(cookies_path)) > 0:
+                return
+            time.sleep(0.5)
+
     def __setup_firefox(self):
         mozilla_dir = os.path.expanduser('~/.mozilla')
         if os.path.exists(mozilla_dir):
@@ -76,14 +85,14 @@ class Test(unittest.TestCase):
         
         self.driver = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=options)
     
-    def __test_browser(self, browser_func, cookies_path=None, wait_seconds=5):
+    def __test_browser(self, browser_func, cookies_path=None, max_wait_seconds=15):
         for url in GO_TO_URLS:
             self.driver.get(url)
             self.driver.implicitly_wait(10)
         
         self.assertGreaterEqual(len(browser_func(cookies_path)), 0)
         self.driver.quit()
-        time.sleep(wait_seconds) # wait for the browser to quit completely
+        self.__wait_for_cookies_to_be_deleted(browser_func, cookies_path, max_wait_seconds)
         self.assertGreater(len(browser_func(cookies_path)), 0)
 
     def __setup_chromium_based(self, chrome_type, binary_location, driver_version=None):
@@ -132,7 +141,7 @@ class Test(unittest.TestCase):
     
     def test_opera(self):
         self.__setup_chromium_based(ChromeType.GOOGLE, self.__binary_location.get(BrowserName.OPERA))
-        self.__test_browser(opera, os.path.join(self.__get_data_dir(), 'Cookies'), wait_seconds=15)
+        self.__test_browser(opera, os.path.join(self.__get_data_dir(), 'Cookies'))
     
     def test_vivaldi(self):
         driver_version = get_driver_version_from_chromium_based_binary('/usr/bin/vivaldi-stable')
