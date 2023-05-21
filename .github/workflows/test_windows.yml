@@ -18,7 +18,7 @@ jobs:
           python-version: 3.11
       - name: Install Browsers
         run: |
-          choco install -y vivadi
+          choco install -y vivaldi
 
           # chrome, edge, are firefox are already installed
           # See: https://github.com/actions/runner-images/blob/main/images/win/Windows2022-Readme.md
