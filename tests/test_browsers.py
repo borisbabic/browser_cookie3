@@ -166,7 +166,7 @@ class Test(unittest.TestCase):
         self.__test_browser(opera, os.path.join(self.__get_data_dir(), 'Cookies'))
     
     def test_vivaldi(self):
-        driver_version = get_driver_version_from_chromium_based_binary('/usr/bin/vivaldi-stable')
+        driver_version = get_driver_version_from_chromium_based_binary(self.__binary_location.get(BrowserName.VIVALDI))
         self.__setup_chromium_based(ChromeType.GOOGLE, self.__binary_location.get(BrowserName.VIVALDI), driver_version)
         self.__test_chromium_based(vivaldi)
 
