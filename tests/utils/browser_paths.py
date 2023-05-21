@@ -36,7 +36,7 @@ BIN_LOCATIONS = {
     BrowserName.FIREFOX: {
         'linux': ['/usr/bin/firefox'],
         'windows': [
-            r'C:\rogram Files (x86)\Mozilla Firefox\firefox.exe'
+            r'C:\Program Files (x86)\Mozilla Firefox\firefox.exe',
             r'C:\Program Files\Mozilla Firefox\firefox.exe'
         ],
         'macos': ['/Applications/Firefox.app/Contents/MacOS/firefox'] # Not tested
@@ -48,7 +48,10 @@ BIN_LOCATIONS = {
     },
     BrowserName.VIVALDI: {
         'linux': ['/usr/bin/vivaldi-stable'],
-        'windows': ['C:\\Program Files (x86)\\Vivaldi\\Application\\vivaldi.exe'], # Not tested
+        'windows': [
+            r'C:\Program Files (x86)\Vivaldi\Application\vivaldi.exe',
+            fr'C:\Users\{os.getlogin()}\AppData\Local\Vivaldi\Application\vivaldi.exe'
+        ],
         'macos': ['/Applications/Vivaldi.app/Contents/MacOS/Vivaldi'] # Not tested
     }
 }
