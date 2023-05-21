@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import tarfile
 import time
+import warnings
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
@@ -39,7 +40,7 @@ class Test(unittest.TestCase):
         if cls.__headless:
             print('Running headless')
         cls.__binary_location = BinaryLocation(raise_not_found=cls.__is_github_actions)
-
+        
     def setUp(self) -> None:
         os.mkdir(self.__temp_dir)
         super().setUp()
@@ -99,7 +100,7 @@ class Test(unittest.TestCase):
         total_cookies = len(browser_func(cookies_path))
         self.assertGreaterEqual(total_cookies, 0)
         if total_cookies < 1:
-            unittest.warn('Cookie database exists but no cookies were detected')
+            warnings.warn('Cookie database was empty after waiting for cookies to be detected')
     
     def __setup_chromium_based(self, chrome_type, binary_location, driver_version=None):
         options = webdriver.ChromeOptions()
