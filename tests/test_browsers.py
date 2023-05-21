@@ -54,12 +54,16 @@ class Test(unittest.TestCase):
         data_dir = os.path.join(self.__temp_dir, self._testMethodName)
         return data_dir
 
-    def __wait_for_cookies_to_be_deleted(self, browser_func, cookies_path, timeout):
+    def __wait_for_cookies_to_be_detected(self, browser_func, cookies_path, timeout):
+        count = 0
         end_time = time.time() + timeout
         while time.time() < end_time:
             if len(browser_func(cookies_path)) > 0:
                 return
-            time.sleep(0.5)
+            if self.__is_github_actions:
+                count += 1
+                print(f'Waiting for cookies to be detected... ({count})')
+            time.sleep(1)
 
     def __setup_firefox(self):
         mozilla_dir = os.path.expanduser('~/.mozilla')
@@ -91,9 +95,11 @@ class Test(unittest.TestCase):
             self.driver.get(url)
             self.driver.implicitly_wait(10)
         
+        self.driver.add_cookie({'name': 'test-xyz', 'value': 'test-abc'})
+
         self.assertGreaterEqual(len(browser_func(cookies_path)), 0)
         self.driver.quit()
-        self.__wait_for_cookies_to_be_deleted(browser_func, cookies_path, max_wait_seconds)
+        self.__wait_for_cookies_to_be_detected(browser_func, cookies_path, max_wait_seconds)
         self.assertGreater(len(browser_func(cookies_path)), 0)
 
     def __setup_chromium_based(self, chrome_type, binary_location, driver_version=None):
