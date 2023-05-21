@@ -55,14 +55,13 @@ class Test(unittest.TestCase):
         return data_dir
 
     def __wait_for_cookies_to_be_detected(self, browser_func, cookies_path, timeout):
-        count = 0
-        end_time = time.time() + timeout
+        start_time = time.time()
+        end_time = start_time + timeout
         while time.time() < end_time:
             if len(browser_func(cookies_path)) > 0:
                 return
             if self.__is_github_actions:
-                count += 1
-                print(f'Waiting for cookies to be detected... ({count})')
+                print(f'Waiting for cookies to be detected... {time.time() - start_time:.2f}s')
             time.sleep(1)
 
     def __setup_firefox(self):
@@ -153,7 +152,7 @@ class Test(unittest.TestCase):
     def test_vivaldi(self):
         driver_version = get_driver_version_from_chromium_based_binary('/usr/bin/vivaldi-stable')
         self.__setup_chromium_based(ChromeType.GOOGLE, self.__binary_location.get(BrowserName.VIVALDI), driver_version)
-        self.__test_chromium_based(vivaldi, wait_seconds=45)
+        self.__test_chromium_based(vivaldi)
 
 
 if __name__ == '__main__':
