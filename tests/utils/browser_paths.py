@@ -6,7 +6,10 @@ from . import BrowserName
 BIN_LOCATIONS = {
     BrowserName.CHROME: {
         'linux': ['/usr/bin/google-chrome-stable'],
-        'windows': ['C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'], # Not tested
+        'windows': [
+            r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
+            r'C:\Program Files\Google\Chrome\Application\chrome.exe'
+        ],
         'macos': ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'] # Not tested
     },
     BrowserName.CHROMIUM: {
@@ -16,17 +19,26 @@ BIN_LOCATIONS = {
     },
     BrowserName.BRAVE: {
         'linux': ['/usr/bin/brave', '/usr/bin/brave-browser'],
-        'windows': ['C:\\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe'], # Not tested
+        'windows': [
+            r'C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe',
+            r'C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe'
+        ],
         'macos': ['/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'] # Not tested
     },
     BrowserName.EDGE: {
         'linux': ['/usr/bin/microsoft-edge-stable'],
-        'windows': ['C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'], # Not tested
+        'windows': [
+            r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
+            r'C:\Program Files\Microsoft\Edge\Application\msedge.exe'
+        ],
         'macos': ['/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'] # Not tested
     },
     BrowserName.FIREFOX: {
         'linux': ['/usr/bin/firefox'],
-        'windows': ['C:\\Program Files\\Mozilla Firefox\\firefox.exe'], # Not tested
+        'windows': [
+            r'C:\rogram Files (x86)\Mozilla Firefox\firefox.exe'
+            r'C:\Program Files\Mozilla Firefox\firefox.exe'
+        ],
         'macos': ['/Applications/Firefox.app/Contents/MacOS/firefox'] # Not tested
     },
     BrowserName.OPERA: {
@@ -57,5 +69,5 @@ class BinaryLocation:
         for i in BIN_LOCATIONS[browser][self.__os]:
             if os.path.exists(i):
                 return i
-        if self.__raise_not_found:
+        if True:
             raise FileNotFoundError('browser not found')

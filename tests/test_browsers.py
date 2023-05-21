@@ -1,4 +1,5 @@
 import base64
+import sys
 import unittest
 import os
 import shutil
@@ -31,7 +32,6 @@ GO_TO_URLS = ['https://google.com', 'https://facebook.com', 'https://aka.ms', 'h
 class Test(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.__temp_dir = tempfile.mktemp(prefix='browser_cookie3_test_')
         cls.__is_github_actions = not not os.environ.get('GITHUB_ACTIONS', False)
         if cls.__is_github_actions:
             cls.__headless = True
@@ -42,21 +42,25 @@ class Test(unittest.TestCase):
         cls.__binary_location = BinaryLocation(raise_not_found=cls.__is_github_actions)
         
     def setUp(self) -> None:
+        self.__temp_dir = tempfile.mktemp(prefix='browser_cookie3_test_')
         os.mkdir(self.__temp_dir)
         super().setUp()
     
     def tearDown(self) -> None:
-        shutil.rmtree(self.__temp_dir)
+        try:
+            shutil.rmtree(self.__temp_dir)
+        except PermissionError:
+            pass
         super().tearDown()
 
     def __get_data_dir(self):
         data_dir = os.path.join(self.__temp_dir, self._testMethodName)
         return data_dir
 
-    def __wait_for_cookies_to_be_detected(self, browser_func, cookies_path, timeout):
+    def __wait_for_cookies_to_be_detected(self, browser_func, cookies_path, key_path, timeout):
         end_time = time.time() + timeout
         while time.time() < end_time:
-            if len(browser_func(cookies_path)) > 0:
+            if len(self.__call_browser_func(browser_func, cookies_path, key_path)) > 0:
                 return
             time.sleep(1)
 
@@ -85,16 +89,22 @@ class Test(unittest.TestCase):
         
         self.driver = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=options)
     
-    def __test_browser(self, browser_func, cookies_path=None, max_wait_seconds=45):
+    @staticmethod
+    def __call_browser_func(func, cookies_path, key_path):
+        if not key_path:
+            return func(cookies_path)
+        return func(cookies_path, key_file=key_path)
+
+    def __test_browser(self, browser_func, cookies_path=None, key_path=None, max_wait_seconds=45):
         for url in GO_TO_URLS:
             self.driver.get(url)
             self.driver.implicitly_wait(10)
         
         time.sleep(5)
-        self.assertGreaterEqual(len(browser_func(cookies_path)), 0)
+        self.assertGreaterEqual(len(self.__call_browser_func(browser_func, cookies_path, key_path)), 0)
         self.driver.quit()
-        self.__wait_for_cookies_to_be_detected(browser_func, cookies_path, max_wait_seconds)
-        total_cookies = len(browser_func(cookies_path))
+        self.__wait_for_cookies_to_be_detected(browser_func, cookies_path, key_path, max_wait_seconds)
+        total_cookies = len(self.__call_browser_func(browser_func, cookies_path, key_path))
         self.assertGreaterEqual(total_cookies, 0)
         if total_cookies < 1:
             warnings.warn('Cookie database was empty after waiting for cookies to be detected')
@@ -109,8 +119,14 @@ class Test(unittest.TestCase):
         self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager(version=driver_version,chrome_type=chrome_type).install()), options=options)
 
     def __test_chromium_based(self, browser_func, max_wait_seconds=45):
-        cookies_path = os.path.join(self.__get_data_dir(), 'Default', 'Cookies')
-        self.__test_browser(browser_func, cookies_path, max_wait_seconds)
+        paths = ['Default', 'Cookies']
+        key_path = None
+        if sys.platform == 'win32':
+            paths.insert(1, 'Network')
+            key_path = os.path.join(self.__get_data_dir(), 'Local State')
+
+        cookies_path = os.path.join(self.__get_data_dir(), *paths)
+        self.__test_browser(browser_func, cookies_path, key_path, max_wait_seconds)
        
     def __setup_edge(self):
         options = webdriver.EdgeOptions()
@@ -131,6 +147,7 @@ class Test(unittest.TestCase):
         self.__setup_chromium_based(ChromeType.BRAVE, self.__binary_location.get(BrowserName.BRAVE))
         self.__test_chromium_based(brave)
     
+    @unittest.skipIf(sys.platform == 'win32', 'Not supported on Windows')
     def test_chromium(self):
         self.__setup_chromium_based(ChromeType.CHROMIUM, self.__binary_location.get(BrowserName.CHROMIUM))
         self.__test_chromium_based(chromium)
