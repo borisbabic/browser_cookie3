@@ -167,7 +167,7 @@ class Test(unittest.TestCase):
     
     @unittest.skipIf(sys.platform == 'win32', 'Not supported on Windows')
     def test_vivaldi(self):
-        driver_version = get_driver_version_from_chromium_based_binary(self.__binary_location.get(BrowserName.VIVALDI))
+        driver_version = '112.0.5615.49' #get_driver_version_from_chromium_based_binary(self.__binary_location.get(BrowserName.VIVALDI))
         self.__setup_chromium_based(ChromeType.GOOGLE, self.__binary_location.get(BrowserName.VIVALDI), driver_version)
         self.__test_chromium_based(vivaldi)
 

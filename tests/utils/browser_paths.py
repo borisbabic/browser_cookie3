@@ -15,8 +15,8 @@ BIN_LOCATIONS = {
     BrowserName.CHROMIUM: {
         'linux': ['/usr/bin/chromium', '/usr/bin/chromium-browser'],
         'windows': [
-            'C:\\Program Files (x86)\\Chromium\\Application\\chrome.exe',
-            'C:\Program Files\Chromium\Application\chrome.exe'
+            r'C:\Program Files (x86)\Chromium\Application\chrome.exe',
+            r'C:\Program Files\Chromium\Application\chrome.exe'
         ],
         'macos': ['/Applications/Chromium.app/Contents/MacOS/Chromium'] # Not tested
     },
@@ -25,7 +25,7 @@ BIN_LOCATIONS = {
         'windows': [
             r'C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe',
             r'C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe',
-            rf'C:\Users\{os.getlogin()}\AppData\Local\BraveSoftware\Brave-Browser-Beta\Application\brave.exe'
+            rf'C:\Users\{os.getlogin()}\AppData\Local\BraveSoftware\Brave-Browser\Application\brave.exe'
         ],
         'macos': ['/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'] # Not tested
     },
