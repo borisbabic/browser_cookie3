@@ -18,7 +18,7 @@ jobs:
           python-version: 3.11
       - name: Install Browsers
         run: |
-          choco install -y  opera opera-gx vivaldi --no-progress
+          choco install -y  opera opera-gx --no-progress
           #choco install -y brave chromium vivaldi --no-progress
 
           # chrome, edge, are firefox are already installed
