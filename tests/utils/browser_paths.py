@@ -16,9 +16,7 @@ BIN_LOCATIONS = {
         'linux': ['/usr/bin/chromium', '/usr/bin/chromium-browser'],
         'windows': [
             'C:\\Program Files (x86)\\Chromium\\Application\\chrome.exe',
-            'C:\Program Files\Chromium\Application\chrome.exe',
-            'C:\\Program Files (x86)\\Chromium\\Application\\chromium.exe',
-            'C:\Program Files\Chromium\Application\chromium.exe'
+            'C:\Program Files\Chromium\Application\chrome.exe'
         ],
         'macos': ['/Applications/Chromium.app/Contents/MacOS/Chromium'] # Not tested
     },
