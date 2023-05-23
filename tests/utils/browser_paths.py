@@ -14,7 +14,12 @@ BIN_LOCATIONS = {
     },
     BrowserName.CHROMIUM: {
         'linux': ['/usr/bin/chromium', '/usr/bin/chromium-browser'],
-        'windows': ['C:\\Program Files (x86)\\Chromium\\Application\\chrome.exe'], # Not tested
+        'windows': [
+            'C:\\Program Files (x86)\\Chromium\\Application\\chrome.exe',
+            'C:\Program Files\Chromium\Application\chrome.exe',
+            'C:\\Program Files (x86)\\Chromium\\Application\\chromium.exe',
+            'C:\Program Files\Chromium\Application\chromium.exe'
+        ],
         'macos': ['/Applications/Chromium.app/Contents/MacOS/Chromium'] # Not tested
     },
     BrowserName.BRAVE: {
@@ -72,6 +77,7 @@ class BinaryLocation:
     def get(self, browser:str) -> str:
         for i in BIN_LOCATIONS[browser][self.__os]:
             if os.path.exists(i):
+                print(f'found {browser} binary at: {i}')
                 return i
         if True:
             raise FileNotFoundError('browser not found')
