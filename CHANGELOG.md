@@ -1,3 +1,5 @@
+### 0.18.2
+- [MODULE] Added tests
 ### 0.18.1
 - [FIREFOX] Fixed Firefox database read error on linux and macOS
 - [MODULE] Fixed read for empty password encrypted cookies on Chromium based browsers
