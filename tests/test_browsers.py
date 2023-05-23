@@ -165,7 +165,7 @@ class Test(unittest.TestCase):
         self.__setup_chromium_based(ChromeType.GOOGLE, self.__binary_location.get(BrowserName.OPERA))
         self.__test_browser(opera, os.path.join(self.__get_data_dir(), 'Cookies'))
     
-    @unittest.skipIf(sys.platform == 'win32', 'Not supported on Windows')
+    #@unittest.skipIf(sys.platform == 'win32', 'Not supported on Windows')
     def test_vivaldi(self):
         driver_version = '112.0.5615.49' #get_driver_version_from_chromium_based_binary(self.__binary_location.get(BrowserName.VIVALDI))
         self.__setup_chromium_based(ChromeType.GOOGLE, self.__binary_location.get(BrowserName.VIVALDI), driver_version)
