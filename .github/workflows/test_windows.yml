@@ -18,8 +18,7 @@ jobs:
           python-version: 3.11
       - name: Install Browsers
         run: |
-          #choco install -y opera opera-gx brave chromium vivaldi --no-progress
-          choco install -y opera-gx
+          choco install -y opera opera-gx brave chromium vivaldi --no-progress
 
           # chrome, edge, and firefox are already installed
           # See: https://github.com/actions/runner-images/blob/main/images/win/Windows2022-Readme.md
@@ -29,4 +28,4 @@ jobs:
           pip install -r tests/test-requirements.txt
       - name: Run Browser Tests
         run: |
-          python -m unittest -v tests.test_browsers.Test.test_opera_gx
+          python -m unittest -v
