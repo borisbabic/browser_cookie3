@@ -22,7 +22,7 @@ from .utils.driver_version import get_driver_version_from_chromium_based_binary
 from .utils.browser_paths import BinaryLocation
 from .utils import BrowserName
 
-from __init__ import chrome, chromium, opera, brave, edge, vivaldi, firefox
+from __init__ import chrome, chromium, opera, brave, edge, vivaldi, firefox, opera_gx
 
 FIREFOX_PROFILE_DIR_TAR_XZ_B64 = '/Td6WFoAAATm1rRGAgAhARYAAAB0L+Wj4Cf/Ab9dADKeCtBB2uo3WZXNf0LmOYhU+/uDA4UuA4WFok+rSGo77xLonlTJRZVUflBOJqwKkKSdaAqhwGEKuBBQPUhhAnLAtEoZDYIZr/+NtA7qmJUYLdsVeR6Wl7WxZbXKiZGGvRIikC0hq43rbn1Yqg9Np1jaN2SAN9nJ+dbdaiRN41M1dNay8kvuJQN82yhVO60WIPevkpqDyk9e6znR/txuyHxu/+CbWOpjVKK0Za4lt3Q4lSoqMjQsyOotQb+PG2xm8gUMIe+oz+95CoHCPsjkgPQwsE9nZ6Va1k1Ao5kgxs7BM5Zc1gJaAeITfxmzI8Z9jmimHExXDoIayhbg+IaENPO40nuioZvaPnRYKU2giDaqKbeMbfgru1OAQqGHJjtHtluCO6g9BddV6w3w2eseL2L/5ftFlv84//BRoqSe60dlPPf6k9FunUY7nE1DrErvms34C8C5ijJy/w6HyQszlbUrUGhcPzlqcWSbx/qVcdynh0RazPq7bnOcSpdRTOKWDNDCo1YWARi5kzCVYhB3nPpFj35fuIWHWfg4JBz6h69RHe7H06SVat4foed/oKNmocM5tuAtFyzqIumE2BbAAAAAYT2+VFTQ6AsAAdsDgFAAAGra6X2xxGf7AgAAAAAEWVo='
 FIREFOX_PROFILE_DIR_NAME = '4xutesqi.default-release'
@@ -164,6 +164,11 @@ class Test(unittest.TestCase):
     def test_opera(self):
         self.__setup_chromium_based(ChromeType.GOOGLE, self.__binary_location.get(BrowserName.OPERA))
         self.__test_browser(opera, os.path.join(self.__get_data_dir(), 'Cookies'))
+    
+    @unittest.skipIf(sys.platform not in ['win32', 'darwin'], 'Only supported on Windows and macOS')
+    def test_opera_gx(self):
+        self.__setup_chromium_based(ChromeType.GOOGLE, self.__binary_location.get(BrowserName.OPERA_GX))
+        self.__test_browser(opera_gx, os.path.join(self.__get_data_dir(), 'Cookies'))
     
     #@unittest.skipIf(sys.platform == 'win32', 'Not supported on Windows')
     def test_vivaldi(self):

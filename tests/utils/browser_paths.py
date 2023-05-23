@@ -47,8 +47,19 @@ BIN_LOCATIONS = {
     },
     BrowserName.OPERA: {
         'linux': ['/usr/bin/opera'],
-        'windows': ['C:\\Program Files\\Opera\\launcher.exe'], # Not tested
+        'windows': [
+            r'C:\Program Files (x86)\Opera\launcher.exe',
+            r'C:\Program Files\Opera\launcher.exe'
+        ], # Not tested
         'macos': ['/Applications/Opera.app/Contents/MacOS/Opera'] # Not tested
+    },
+    BrowserName.OPERA_GX: {
+        'linux': [],
+        'windows': [
+            r'C:\Program Files (x86)\Opera GX\launcher.exe',
+            r'C:\Program Files\Opera GX\launcher.exe'
+        ], # Not tested
+        'macos': ['/Applications/Opera GX.app/Contents/MacOS/Opera GX'] # Not tested
     },
     BrowserName.VIVALDI: {
         'linux': ['/usr/bin/vivaldi-stable'],
