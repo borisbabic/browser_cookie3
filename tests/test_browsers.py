@@ -6,6 +6,7 @@ import shutil
 import tempfile
 import tarfile
 import time
+import json
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
@@ -59,9 +60,23 @@ class Test(unittest.TestCase):
         data_dir = os.path.join(self.__temp_dir, self._testMethodName)
         return data_dir
 
+    def __is_key_path_okay(self, key_path):
+        if not key_path:
+            return True # keypath not provided, will use default
+        if sys.platform != 'win32':
+            return True # keypath only used on windows
+        if not os.path.exists(key_path):
+            return False
+        with open(key_path, 'r') as f:
+            data = json.load(f).get('os_crypt', {}).get('encrypted_key', None)
+        return data is not None
+
     def __wait_for_cookies_to_be_detected(self, browser_func, cookies_path, key_path, timeout):
         end_time = time.time() + timeout
         while time.time() < end_time:
+            if not self.__is_key_path_okay(key_path):
+                time.sleep(1)
+                continue
             if len(self.__call_browser_func(browser_func, cookies_path, key_path)) > 0:
                 return
             time.sleep(1)
