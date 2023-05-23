@@ -48,16 +48,16 @@ BIN_LOCATIONS = {
     BrowserName.OPERA: {
         'linux': ['/usr/bin/opera'],
         'windows': [
-            r'C:\Program Files (x86)\Opera\launcher.exe',
-            r'C:\Program Files\Opera\launcher.exe'
+            r'C:\Program Files (x86)\Opera\opera.exe',
+            r'C:\Program Files\Opera\opera.exe'
         ], # Not tested
         'macos': ['/Applications/Opera.app/Contents/MacOS/Opera'] # Not tested
     },
     BrowserName.OPERA_GX: {
         'linux': [],
         'windows': [
-            r'C:\Program Files (x86)\Opera GX\launcher.exe',
-            r'C:\Program Files\Opera GX\launcher.exe'
+            r'C:\Program Files (x86)\Opera GX\opera.exe',
+            r'C:\Program Files\Opera GX\opera.exe'
         ], # Not tested
         'macos': ['/Applications/Opera GX.app/Contents/MacOS/Opera GX'] # Not tested
     },
@@ -65,6 +65,7 @@ BIN_LOCATIONS = {
         'linux': ['/usr/bin/vivaldi-stable'],
         'windows': [
             r'C:\Program Files (x86)\Vivaldi\Application\vivaldi.exe',
+            r'C:\Program Files\Vivaldi\Application\vivaldi.exe',
             fr'C:\Users\{os.getlogin()}\AppData\Local\Vivaldi\Application\vivaldi.exe'
         ],
         'macos': ['/Applications/Vivaldi.app/Contents/MacOS/Vivaldi'] # Not tested
