@@ -39,8 +39,12 @@ jobs:
       - name: Set Environment Variables
         run: |
           echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> "$GITHUB_ENV"
-      - name: Run Tests
+      - name: Run Browser Tests
         env:
           DBUS_SESSION_BUS_ADDRESS: "${{ env.DBUS_SESSION_BUS_ADDRESS }}"
         run: |
           python -m unittest -v
+      - name: Test Build
+        run: |
+          pip install build
+          python -m build

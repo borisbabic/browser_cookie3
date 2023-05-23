@@ -26,6 +26,6 @@ jobs:
       - name: Install Python Dependencies
         run: |
           pip install -r tests/test-requirements.txt
-      - name: Run Tests
+      - name: Run Browser Tests
         run: |
           python -m unittest -v
