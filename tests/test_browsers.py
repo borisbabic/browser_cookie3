@@ -149,7 +149,7 @@ class Test(unittest.TestCase):
     
     # @unittest.skipIf(sys.platform == 'win32', 'Not supported on Windows')
     def test_chromium(self):
-        self.__setup_chromium_based(ChromeType.CHROMIUM, self.__binary_location.get(BrowserName.CHROMIUM), 'latest')
+        self.__setup_chromium_based(ChromeType.CHROMIUM, self.__binary_location.get(BrowserName.CHROMIUM))
         self.__test_chromium_based(chromium)
     
     def test_chrome(self):
