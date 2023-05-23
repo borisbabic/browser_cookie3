@@ -290,7 +290,9 @@ class _LinuxPasswordManager:
             _, _, secret, _ = connection.call_method('GetSecrets', 'aoo', [object_path], session)[object_path]
             return secret
 
-    def __get_kdewallet_password_jeepney(self, folder, key):
+    def __get_kdewallet_password_jeepney(self, os_crypt_name):
+        folder = f'{os_crypt_name.capitalize()} Keys'
+        key = f'{os_crypt_name.capitalize()} Safe Storage'
         with _JeepneyConnection('/modules/kwalletd5', 'org.kde.kwalletd5', 'org.kde.KWallet') as connection:
             network_wallet = connection.call_method('networkWallet')
             handle = connection.call_method('open', 'sxs', network_wallet, 0, self._APP_ID)
@@ -331,7 +333,10 @@ class _DatabaseConnetion():
     def __sqlite3_connect_readonly(self):
         uri = Path(self.__database_file).absolute().as_uri()
         for options in ('?mode=ro', '?mode=ro&nolock=1'):
-            con = sqlite3.connect(uri + options, uri=True)
+            try:
+                con = sqlite3.connect(uri + options, uri=True)
+            except sqlite3.OperationalError:
+                continue
             if self.__check_connection_ok(con):
                 return con
 
@@ -856,8 +861,7 @@ class Firefox:
         if not os.path.exists(self.session_file):
             return
         try:
-            json_data = json.loads(
-                open(self.session_file, 'rb').read().decode())
+            json_data = json.load(self.session_file)
         except ValueError as e:
             print('Error parsing firefox session JSON:', str(e))
         else:
@@ -870,9 +874,9 @@ class Firefox:
         if not os.path.exists(self.session_file_lz4):
             return
         try:
-            file_obj = open(self.session_file_lz4, 'rb')
-            file_obj.read(8)
-            json_data = json.loads(lz4.block.decompress(file_obj.read()))
+            with open(self.session_file_lz4, 'rb') as file_obj:
+                file_obj.read(8)
+                json_data = json.loads(lz4.block.decompress(file_obj.read()))
         except ValueError as e:
             print('Error parsing firefox session JSON LZ4:', str(e))
         else:

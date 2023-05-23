@@ -1,0 +1,6 @@
+webdriver-manager
+selenium==4.9.1
+pycryptodomex
+requests
+jeepney
+lz4
