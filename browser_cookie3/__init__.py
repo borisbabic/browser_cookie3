@@ -14,7 +14,7 @@ import sys
 from io import BytesIO
 from pathlib import Path
 import tempfile
-from typing import Union
+from typing import Union, Dict, List
 
 import sqlite3
 
@@ -112,7 +112,7 @@ def _get_osx_keychain_password(osx_key_service, osx_key_user):
 
 def _expand_win_path(path:Union[dict,str]):
     if not isinstance(path,dict):
-        path = {'path': path}
+        path = {'path': path, 'env': 'APPDATA'}
     return os.path.join(os.getenv(path['env'], ''), path['path'])
 
 
@@ -772,10 +772,11 @@ class Vivaldi(ChromiumBased):
         super().__init__(browser='Vivaldi', cookie_file=cookie_file, domain_name=domain_name, key_file=key_file, **args)
 
 
-class Firefox:
-    """Class for Firefox"""
-    def __init__(self, cookie_file=None, domain_name=""):
-        self.cookie_file = cookie_file or self.find_cookie_file()
+class FirefoxBased:
+    """Superclass for Firefox based browsers"""
+    def __init__(self, browser_name, cookie_file=None, domain_name="", **kwargs):
+        self.browser_name = browser_name
+        self.cookie_file = cookie_file or self.__find_cookie_file(**kwargs)
         # current sessions are saved in sessionstore.js
         self.session_file = os.path.join(
             os.path.dirname(self.cookie_file), 'sessionstore.js')
@@ -785,7 +786,7 @@ class Firefox:
         self.domain_name = domain_name
 
     def __str__(self):
-        return 'firefox'
+        return self.browser_name
 
     @staticmethod
     def get_default_profile(user_data_path):
@@ -816,41 +817,45 @@ class Firefox:
                 return profile_path if absolute else os.path.join(os.path.dirname(profiles_ini_path), profile_path)
 
         return fallback_path
+    
+    def __expand_and_check_path(self, paths: Union[str, List[str], Dict[str, str], List[Dict[str, str]]]) -> str:
+        """Expands a path to a list of paths and returns the first one that exists"""
+        if not isinstance(paths, list):
+            paths = [paths]
+        for path in paths:
+            if isinstance(path, dict):
+                expanded = _expand_win_path(path)
+            else:
+                expanded = os.path.expanduser(path)
+            if os.path.isdir(expanded):
+                return expanded
+        raise FileNotFoundError(f'Could not find {self.browser_name} profile directory')
+    
 
-    @staticmethod
-    def find_cookie_file():
+    def __find_cookie_file(self, linux_data_dirs=None, windows_data_dirs=None, osx_data_dirs=None):
         cookie_files = []
 
         if sys.platform == 'darwin':
-            user_data_path = os.path.expanduser(
-                '~/Library/Application Support/Firefox')
+            user_data_path = self.__expand_and_check_path(osx_data_dirs)
         elif sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
-            # Looking for cookies from a Snap based Firefox first, as some
-            # users might have profiles at both this and the other location,
-            # as they were migrated to Snap by their OS at some point, leaving
-            # cookies at the other location outdated.
-            general_path = os.path.expanduser('~/snap/firefox/common/.mozilla/firefox')
-            if os.path.isdir(general_path):
-                user_data_path = general_path
-            else:
-                user_data_path = os.path.expanduser('~/.mozilla/firefox')
+            user_data_path = self.__expand_and_check_path(linux_data_dirs)
         elif sys.platform == 'win32':
-            user_data_path = os.path.join(
-                os.environ.get('APPDATA'), 'Mozilla', 'Firefox')
-            # legacy firefox <68 fallback
-            cookie_files = glob.glob(os.path.join(os.environ.get('PROGRAMFILES'), 'Mozilla Firefox', 'profile', 'cookies.sqlite')) \
-                or glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)'), 'Mozilla Firefox', 'profile', 'cookies.sqlite'))
+            user_data_path = self.__expand_and_check_path(windows_data_dirs)
+            # legacy firefox <68 fallback for firefox on windows
+            if self.browser_name.lower() == 'firefox':
+                cookie_files = glob.glob(os.path.join(os.environ.get('PROGRAMFILES'), 'Mozilla Firefox', 'profile', 'cookies.sqlite')) \
+                    or glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)'), 'Mozilla Firefox', 'profile', 'cookies.sqlite'))
         else:
             raise BrowserCookieError(
                 'Unsupported operating system: ' + sys.platform)
 
-        cookie_files = glob.glob(os.path.join(Firefox.get_default_profile(user_data_path), 'cookies.sqlite')) \
+        cookie_files = glob.glob(os.path.join(FirefoxBased.get_default_profile(user_data_path), 'cookies.sqlite')) \
             or cookie_files
 
         if cookie_files:
             return cookie_files[0]
         else:
-            raise BrowserCookieError('Failed to find Firefox cookie file')
+            raise BrowserCookieError(f'Failed to find {self.browser_name} cookie file')
 
     @staticmethod
     def __create_session_cookie(cookie_json):
@@ -865,12 +870,12 @@ class Firefox:
         try:
             json_data = json.load(self.session_file)
         except ValueError as e:
-            print('Error parsing firefox session JSON:', str(e))
+            print(f'Error parsing {self.browser_name} session JSON:', str(e))
         else:
             for window in json_data.get('windows', []):
                 for cookie in window.get('cookies', []):
                     if self.domain_name == '' or self.domain_name in cookie.get('host', ''):
-                        cj.set_cookie(Firefox.__create_session_cookie(cookie))
+                        cj.set_cookie(FirefoxBased.__create_session_cookie(cookie))
 
     def __add_session_cookies_lz4(self, cj):
         if not os.path.exists(self.session_file_lz4):
@@ -880,15 +885,15 @@ class Firefox:
                 file_obj.read(8)
                 json_data = json.loads(lz4.block.decompress(file_obj.read()))
         except ValueError as e:
-            print('Error parsing firefox session JSON LZ4:', str(e))
+            print(f'Error parsing {self.browser_name} session JSON LZ4:', str(e))
         else:
             for cookie in json_data.get('cookies', []):
                 if self.domain_name == '' or self.domain_name in cookie.get('host', ''):
-                    cj.set_cookie(Firefox.__create_session_cookie(cookie))
+                    cj.set_cookie(FirefoxBased.__create_session_cookie(cookie))
 
     def load(self):
         cj = http.cookiejar.CookieJar()
-        with _DatabaseConnetion(self.cookie_file, True) as con: # firefox seems faster with legacy mode
+        with _DatabaseConnetion(self.cookie_file, True) as con: # firefoxbased seems faster with legacy mode
             cur = con.cursor()
             cur.execute('select host, path, isSecure, expiry, name, value, isHttpOnly from moz_cookies '
                     'where host like ?', ('%{}%'.format(self.domain_name),))
@@ -902,7 +907,43 @@ class Firefox:
         self.__add_session_cookies_lz4(cj)
 
         return cj
+    
 
+class Firefox(FirefoxBased):
+    """Class for Firefox"""
+    def __init__(self, cookie_file=None, domain_name=""):
+        args = {
+            'linux_data_dirs': [
+                '~/snap/firefox/common/.mozilla/firefox',
+                '~/.mozilla/firefox'
+            ],
+            'windows_data_dirs': [
+                {'env': 'APPDATA', 'path': r'Mozilla\Firefox'},
+                {'env': 'LOCALAPPDATA', 'path': r'Mozilla\Firefox'}
+            ],
+            'osx_data_dirs': [
+                '~/Library/Application Support/Firefox'                
+            ]
+        }
+        super().__init__('Firefox', cookie_file, domain_name, **args)
+
+class LibreWolf(FirefoxBased):
+    """Class for LibreWolf"""
+    def __init__(self, cookie_file=None, domain_name=""):
+        args = {
+            'linux_data_dirs': [
+                '~/snap/librewolf/common/.librewolf',
+                '~/.librewolf'
+            ],
+            'windows_data_dirs': [
+                {'env': 'APPDATA', 'path': r'LibreWolf'},
+                {'env': 'LOCALAPPDATA', 'path': r'LibreWolf'}
+            ],
+            'osx_data_dirs': [
+                '~/Library/Application Support/LibreWolf'                
+            ]
+        }
+        super().__init__('LibreWolf', cookie_file, domain_name, **args)
 
 class Safari:
     """Class for Safari"""
@@ -1080,6 +1121,12 @@ def firefox(cookie_file=None, domain_name=""):
     """
     return Firefox(cookie_file, domain_name).load()
 
+def librewolf(cookie_file=None, domain_name=""):
+    """Returns a cookiejar of the cookies and sessions used by LibreWolf. Optionally
+    pass in a domain name to only load cookies from the specified domain
+    """
+    return LibreWolf(cookie_file, domain_name).load()
+
 def safari(cookie_file=None, domain_name=""):
     """Returns a cookiejar of the cookies and sessions used by Safari. Optionally
     pass in a domain name to only load cookies from the specified domain
@@ -1091,7 +1138,7 @@ def load(domain_name=""):
     Optionally pass in a domain name to only load cookies from the specified domain
     """
     cj = http.cookiejar.CookieJar()
-    for cookie_fn in [chrome, chromium, opera, opera_gx, brave, edge, vivaldi, firefox, safari]:
+    for cookie_fn in [chrome, chromium, opera, opera_gx, brave, edge, vivaldi, firefox, librewolf, safari]:
         try:
             for cookie in cookie_fn(domain_name=domain_name):
                 cj.set_cookie(cookie)
