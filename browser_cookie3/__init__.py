@@ -419,6 +419,8 @@ class ChromiumBased:
                     # Decode Key, get rid of DPAPI prefix, unprotect data
                     keydpapi = base64.standard_b64decode(key64)[5:]
                     _, self.v10_key = _crypt_unprotect_data(keydpapi, is_key=True)
+            else:
+                self.v10_key = None
 
             # get cookie file from APPDATA
 
@@ -482,7 +484,7 @@ class ChromiumBased:
         if len(value) != 0:
             return value
 
-        if encrypted_value == "":
+        if encrypted_value == b"":
             return ""
 
         _, data = _crypt_unprotect_data(encrypted_value)
