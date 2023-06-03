@@ -332,7 +332,7 @@ class _DatabaseConnetion():
 
     def __sqlite3_connect_readonly(self):
         uri = Path(self.__database_file).absolute().as_uri()
-        for options in ('?mode=ro', '?mode=ro&nolock=1'):
+        for options in ('?mode=ro', '?mode=ro&nolock=1', '?mode=ro&immutable=1'):
             try:
                 con = sqlite3.connect(uri + options, uri=True)
             except sqlite3.OperationalError:
