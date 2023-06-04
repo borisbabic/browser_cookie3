@@ -332,7 +332,7 @@ class _DatabaseConnetion():
 
     def __sqlite3_connect_readonly(self):
         uri = Path(self.__database_file).absolute().as_uri()
-        for options in ('?mode=ro', '?mode=ro&nolock=1'):
+        for options in ('?mode=ro', '?mode=ro&nolock=1', '?mode=ro&immutable=1'):
             try:
                 con = sqlite3.connect(uri + options, uri=True)
             except sqlite3.OperationalError:
@@ -548,7 +548,9 @@ class Chrome(ChromiumBased):
             'linux_cookies': _genarate_nix_paths_chromium(
                 [
                     '~/.config/google-chrome{channel}/Default/Cookies',
-                    '~/.config/google-chrome{channel}/Profile */Cookies'
+                    '~/.config/google-chrome{channel}/Profile */Cookies',
+                    '~/.var/app/com.google.Chrome/config/google-chrome{channel}/Default/Cookies',
+                    '~/.var/app/com.google.Chrome/config/google-chrome{channel}/Profile */Cookies'
                 ],
                 channel=['', '-beta', '-unstable']
             ),
@@ -585,7 +587,9 @@ class Chromium(ChromiumBased):
         args = {
             'linux_cookies':[
                 '~/.config/chromium/Default/Cookies',
-                '~/.config/chromium/Profile */Cookies'
+                '~/.config/chromium/Profile */Cookies',
+                '~/.var/app/org.chromium.Chromium/config/chromium/Default/Cookies',
+                '~/.var/app/org.chromium.Chromium/config/chromium/Profile */Cookies'
             ],
             'windows_cookies': _genarate_win_paths_chromium(
                 [
@@ -616,7 +620,10 @@ class Opera(ChromiumBased):
             'linux_cookies': [
                 '~/.config/opera/Cookies',
                 '~/.config/opera-beta/Cookies',
-                '~/.config/opera-developer/Cookies'
+                '~/.config/opera-developer/Cookies',
+                '~/.var/app/com.opera.Opera/config/opera/Cookies'
+                '~/.var/app/com.opera.Opera/config/opera-beta/Cookies'
+                '~/.var/app/com.opera.Opera/config/opera-developer/Cookies'
             ],
             'windows_cookies': _genarate_win_paths_chromium(
                 [
@@ -671,7 +678,9 @@ class Brave(ChromiumBased):
             'linux_cookies':_genarate_nix_paths_chromium(
                 [
                     '~/.config/BraveSoftware/Brave-Browser{channel}/Default/Cookies',
-                    '~/.config/BraveSoftware/Brave-Browser{channel}/Profile */Cookies'
+                    '~/.config/BraveSoftware/Brave-Browser{channel}/Profile */Cookies',
+                    '~/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser{channel}/Default/Cookies',
+                    '~/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser{channel}/Profile */Cookies'
                 ],
                 channel=['', '-Beta', '-Dev', '-Nightly']
             ),
@@ -709,7 +718,9 @@ class Edge(ChromiumBased):
             'linux_cookies': _genarate_nix_paths_chromium(
                 [
                     '~/.config/microsoft-edge{channel}/Default/Cookies',
-                    '~/.config/microsoft-edge{channel}/Profile */Cookies'
+                    '~/.config/microsoft-edge{channel}/Profile */Cookies',
+                    "~/.var/app/com.microsoft.Edge/config/microsoft-edge{channel}/Default/Cookies",
+                    "~/.var/app/com.microsoft.Edge/config/microsoft-edge{channel}/Profile */Cookies",
                 ],
                 channel=['', '-beta', '-dev']
             ),
@@ -748,7 +759,9 @@ class Vivaldi(ChromiumBased):
                 '~/.config/vivaldi/Default/Cookies',
                 '~/.config/vivaldi/Profile */Cookies',
                 '~/.config/vivaldi-snapshot/Default/Cookies',
-                '~/.config/vivaldi-snapshot/Profile */Cookies'
+                '~/.config/vivaldi-snapshot/Profile */Cookies',
+                '~/.var/app/com.vivaldi.Vivaldi/config/vivaldi/Default/Cookies',
+                '~/.var/app/com.vivaldi.Vivaldi/config/vivaldi/Profile */Cookies'
             ],
             'windows_cookies': _genarate_win_paths_chromium(
                 [
