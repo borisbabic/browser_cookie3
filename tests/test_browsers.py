@@ -203,10 +203,8 @@ class Test(unittest.TestCase):
             options.add_argument('--headless=new')
             options.add_argument('--disable-gpu')
 
-        executable_path = os.environ.get(
-            'EDGEWEBDRIVER', None) or EdgeChromiumDriverManager().install()
         self.driver = webdriver.Edge(
-            service=EdgeService(executable_path), options=options)
+            service=EdgeService(EdgeChromiumDriverManager().install()), options=options)
 
     def test_edge(self):
         # Edge is based on Chromium, but __setup_chromium_based() doesn't work for Edge
