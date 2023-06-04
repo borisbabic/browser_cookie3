@@ -23,10 +23,10 @@ from .utils.driver_version import get_vivaldi_driver_version
 from .utils.browser_paths import BinaryLocation
 from .utils import BrowserName, logger
 
-from browser_cookie3 import chrome, chromium, opera, brave, edge, vivaldi, firefox, opera_gx, load
+from browser_cookie3 import chrome, chromium, opera, brave, edge, vivaldi, firefox, librewolf, opera_gx, load
 
-FIREFOX_PROFILE_DIR_TAR_XZ_B64 = '/Td6WFoAAATm1rRGAgAhARYAAAB0L+Wj4Cf/Ab9dADKeCtBB2uo3WZXNf0LmOYhU+/uDA4UuA4WFok+rSGo77xLonlTJRZVUflBOJqwKkKSdaAqhwGEKuBBQPUhhAnLAtEoZDYIZr/+NtA7qmJUYLdsVeR6Wl7WxZbXKiZGGvRIikC0hq43rbn1Yqg9Np1jaN2SAN9nJ+dbdaiRN41M1dNay8kvuJQN82yhVO60WIPevkpqDyk9e6znR/txuyHxu/+CbWOpjVKK0Za4lt3Q4lSoqMjQsyOotQb+PG2xm8gUMIe+oz+95CoHCPsjkgPQwsE9nZ6Va1k1Ao5kgxs7BM5Zc1gJaAeITfxmzI8Z9jmimHExXDoIayhbg+IaENPO40nuioZvaPnRYKU2giDaqKbeMbfgru1OAQqGHJjtHtluCO6g9BddV6w3w2eseL2L/5ftFlv84//BRoqSe60dlPPf6k9FunUY7nE1DrErvms34C8C5ijJy/w6HyQszlbUrUGhcPzlqcWSbx/qVcdynh0RazPq7bnOcSpdRTOKWDNDCo1YWARi5kzCVYhB3nPpFj35fuIWHWfg4JBz6h69RHe7H06SVat4foed/oKNmocM5tuAtFyzqIumE2BbAAAAAYT2+VFTQ6AsAAdsDgFAAAGra6X2xxGf7AgAAAAAEWVo='
-FIREFOX_PROFILE_DIR_NAME = '4xutesqi.default-release'
+FIREFOX_BASED_PROFILE_DIR_TAR_XZ_B64 = '/Td6WFoAAATm1rRGAgAhARYAAAB0L+Wj4Cf/AYFdABoeCqdqx8Ww3rP7opUNoguNkPsxJ2/LebvQiBz6BsBQHaW+I1WQtjmf3unq5qmmUUrSZDK1J4u30H9wRGMKCVjK3Fc4k2kZ6V9v2ySBjXGozKv3Fk/Ai8MCLrCO+SZEQvWOKlVVCBs798tiUloPgnBdT3fRm60SZOSq9gz0ac+/B5M3kI2E9sc6zTn1BVUGf3XpssfNTbyq3Htm/XyjGXwsjpxHjVVfoijHC5ldnaE09Ro14TLFRs56FUolOssUzvXnWt0VrFd3dD/oZxVJ7XDS/1lirTYUWMkiPu4lU6icGJWzIVIEh5MA/cBoO7LDHd6ehXlyhbOGPeNpVuk7a0GGOq295Zi/4jFT2JeIm9QOtw/pcRFsP/sn6Y1MS2BBiO9A30qT0zyb+mqho8kxvK2gMnZWJSFczG/9lyWyNc8gDtpYYyGBjfinCYdJlcOAMoa5pS3zS5g4AIvCSKVwEH1Ba3gn1StsUCGMT4Nw9Pom/Wkd3JGSfq30VB+bRRNlch0AAAAA7jsEu81WUn0AAZ0DgFAAABsz6KSxxGf7AgAAAAAEWVo='
+FIREFOX_BASED_PROFILE_DIR_NAME = '4xutesqi.default-release'
 GO_TO_URLS = ['https://google.com', 'https://facebook.com', 'https://aka.ms', 'https://github.com']
 
 
@@ -81,30 +81,34 @@ class Test(unittest.TestCase):
                 return
             time.sleep(1)
 
-    def __setup_firefox(self):
-        mozilla_dir = os.path.join(self.__temp_dir, '.mozilla')
-        if os.path.exists(mozilla_dir):
-            raise Exception(f'{mozilla_dir} already exists')
-        os.mkdir(mozilla_dir)
+    def __setup_firefox_based(self, profile_containing_dir, binary_location):
+        if os.path.exists(profile_containing_dir):
+            raise Exception(f'Profile dir already exists: {profile_containing_dir}')
+        os.makedirs(profile_containing_dir)
 
         xz_file = tempfile.mktemp(suffix='.tar.xz')
         with open(xz_file, 'wb') as f:
-            f.write(base64.b64decode(FIREFOX_PROFILE_DIR_TAR_XZ_B64))
+            f.write(base64.b64decode(FIREFOX_BASED_PROFILE_DIR_TAR_XZ_B64))
         with tarfile.open(xz_file) as f:
-            f.extractall(mozilla_dir)
+            f.extractall(profile_containing_dir)
         os.remove(xz_file)
         
-        profile_dir = os.path.join(mozilla_dir, 'firefox', FIREFOX_PROFILE_DIR_NAME)
+        profile_dir = os.path.join(profile_containing_dir, FIREFOX_BASED_PROFILE_DIR_NAME)
 
         options = webdriver.FirefoxOptions()
-        options.binary_location = self.__binary_location.get(BrowserName.FIREFOX)
+        options.binary_location = binary_location
         options.add_argument('-profile')
         options.add_argument(profile_dir)
+        # Disable clearing cookies on shutdown, cookies is cleared by some firefox-based browsers
+        options.set_preference('privacy.clearOnShutdown.cookies', False)
+
         if self.__headless:
             options.add_argument('--headless')
             options.add_argument('--disable-gpu')
         
-        self.driver = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()), options=options)
+        executable_path = os.environ.get('GECKOWEBDRIVER', None) or GeckoDriverManager().install()
+        
+        self.driver = webdriver.Firefox(service=FirefoxService(executable_path), options=options)
     
     @staticmethod
     def __call_browser_func(func, cookies_path, key_path):
@@ -176,7 +180,9 @@ class Test(unittest.TestCase):
         if self.__headless:
             options.add_argument('--headless=new')
             options.add_argument('--disable-gpu')
-        self.driver = webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install()), options=options)
+        
+        executable_path = os.environ.get('EDGEWEBDRIVER', None) or EdgeChromiumDriverManager().install()
+        self.driver = webdriver.Edge(service=EdgeService(executable_path), options=options)
 
     def test_edge(self):
         self.__setup_edge() # Edge is based on Chromium, but __setup_chromium_based() doesn't work for Edge
@@ -197,9 +203,20 @@ class Test(unittest.TestCase):
         self.__test_chromium_based(chrome)
     
     def test_firefox(self):
-        self.__setup_firefox()
-        cookie_path = os.path.join(self.__temp_dir, '.mozilla', 'firefox', FIREFOX_PROFILE_DIR_NAME, 'cookies.sqlite')
+        profile_containing_dir = os.path.join(self.__temp_dir, '.mozilla', 'firefox')
+        cookie_path = os.path.join(profile_containing_dir, FIREFOX_BASED_PROFILE_DIR_NAME, 'cookies.sqlite')
+        binary_location = self.__binary_location.get(BrowserName.FIREFOX)
+        
+        self.__setup_firefox_based(profile_containing_dir, binary_location)
         self.__test_browser(firefox, cookie_path)
+    
+    def test_librewolf(self):
+        profile_containing_dir = os.path.join(self.__temp_dir, '.librewolf')
+        cookie_path = os.path.join(profile_containing_dir, FIREFOX_BASED_PROFILE_DIR_NAME, 'cookies.sqlite')
+        binary_location = self.__binary_location.get(BrowserName.LIBREWOLF)
+        
+        self.__setup_firefox_based(profile_containing_dir, binary_location)
+        self.__test_browser(librewolf, cookie_path)
     
     def test_opera(self):
         self.__setup_opera_based(self.__binary_location.get(BrowserName.OPERA))

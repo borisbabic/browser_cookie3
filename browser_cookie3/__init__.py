@@ -854,7 +854,7 @@ class FirefoxBased:
             user_data_path = self.__expand_and_check_path(linux_data_dirs)
         elif sys.platform == 'win32':
             user_data_path = self.__expand_and_check_path(windows_data_dirs)
-            # legacy firefox <68 fallback for firefox on windows
+            # legacy firefox <68 fallback for firefox on windows, kept for backwards compatibility
             if self.browser_name.lower() == 'firefox':
                 cookie_files = glob.glob(os.path.join(os.environ.get('PROGRAMFILES'), 'Mozilla Firefox', 'profile', 'cookies.sqlite')) \
                     or glob.glob(os.path.join(os.environ.get('PROGRAMFILES(X86)'), 'Mozilla Firefox', 'profile', 'cookies.sqlite'))

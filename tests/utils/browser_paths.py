@@ -51,6 +51,15 @@ BIN_LOCATIONS = {
         ],
         'macos': ['/Applications/Firefox.app/Contents/MacOS/firefox'] # Not tested
     },
+    BrowserName.LIBREWOLF: {
+        'linux': ['/usr/bin/librewolf'],
+        'windows': [
+            r'C:\Program Files (x86)\LibreWolf\librewolf.exe',
+            r'C:\Program Files\LibreWolf\librewolf.exe',
+            fr'C:\Users\{get_username()}\AppData\Local\LibreWolf\librewolf.exe'
+        ],
+        'macos': ['/Applications/LibreWolf.app/Contents/MacOS/LibreWolf'] # Not tested
+    },
     BrowserName.OPERA: {
         'linux': ['/usr/bin/opera'],
         'windows': [
