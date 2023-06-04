@@ -8,15 +8,14 @@ import http.cookiejar
 import json
 import os
 import shutil
+import sqlite3
 import struct
 import subprocess
 import sys
+import tempfile
 from io import BytesIO
 from pathlib import Path
-import tempfile
-from typing import Union, Dict, List
-
-import sqlite3
+from typing import Dict, List, Union
 
 if sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
     try:
@@ -29,7 +28,6 @@ if sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
 
 # external dependencies
 import lz4.block
-
 from Cryptodome.Cipher import AES
 from Cryptodome.Protocol.KDF import PBKDF2
 from Cryptodome.Util.Padding import unpad

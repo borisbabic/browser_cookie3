@@ -8,7 +8,7 @@ setup(
     package_dir={'browser_cookie3': 'browser_cookie3'},
     author='Boris Babic',
     author_email='boris.ivan.babic@gmail.com',
-    description='Loads cookies from your browser into a cookiejar object so can download with urllib and other libraries the same content you see in the web browser.',
+    description='Loads cookies from your browser into a cookiejar object so can download with urllib and other libraries the same content you see in the web browser.',     # noqa: E501
     url='https://github.com/borisbabic/browser_cookie3',
     install_requires=[
         'lz4',
