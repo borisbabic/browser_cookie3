@@ -1012,11 +1012,11 @@ class LibreWolf(FirefoxBased):
                 '~/.librewolf'
             ],
             'windows_data_dirs': [
-                {'env': 'APPDATA', 'path': r'LibreWolf'},
-                {'env': 'LOCALAPPDATA', 'path': r'LibreWolf'}
+                {'env': 'APPDATA', 'path': 'librewolf'},
+                {'env': 'LOCALAPPDATA', 'path': 'librewolf'}
             ],
             'osx_data_dirs': [
-                '~/Library/Application Support/LibreWolf'
+                '~/Library/Application Support/librewolf'
             ]
         }
         super().__init__('LibreWolf', cookie_file, domain_name, **args)
@@ -1238,4 +1238,4 @@ def load(domain_name=""):
 
 
 if __name__ == '__main__':
-    print(chrome())
+    print(load())
