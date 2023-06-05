@@ -1,3 +1,7 @@
+### 0.19.0
+- [MODULE] Added new browser support: LibreWolf
+- [MODULE] Added `immutable` mode for opening cookies database
+- [Chromium based] Added paths for flatpak installations
 ### 0.18.2
 - [MODULE] Added tests
 ### 0.18.1

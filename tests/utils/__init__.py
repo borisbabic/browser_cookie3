@@ -1,4 +1,6 @@
 import logging
+
+
 class BrowserName:
     CHROME = 'chrome'
     CHROMIUM = 'chromium'
@@ -8,6 +10,8 @@ class BrowserName:
     EDGE = 'edge'
     VIVALDI = 'vivaldi'
     FIREFOX = 'firefox'
+    LIBREWOLF = 'librewolf'
+
 
 logger = logging.getLogger('browser_cookie3_test')
 logger.setLevel(logging.INFO)

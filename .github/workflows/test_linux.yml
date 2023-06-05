@@ -27,11 +27,31 @@ jobs:
           curl -fsSL https://repo.vivaldi.com/archive/linux_signing_key.pub | gpg --dearmor | sudo tee /usr/share/keyrings/vivaldi-archive-keyring.gpg > /dev/null
           echo "deb [signed-by=/usr/share/keyrings/vivaldi-archive-keyring.gpg] https://repo.vivaldi.com/archive/deb/ stable main" | sudo tee /etc/apt/sources.list.d/vivaldi.list > /dev/null
 
+          distro=$(if echo " una vanessa focal jammy bullseye vera uma" | grep -q " $(lsb_release -sc) "; then echo $(lsb_release -sc); else echo focal; fi)
+          curl -fsSL https://deb.librewolf.net/keyring.gpg | sudo gpg --dearmor -o /usr/share/keyrings/librewolf.gpg
+
+          sudo tee /etc/apt/sources.list.d/librewolf.sources << EOF > /dev/null
+          Types: deb
+          URIs: https://deb.librewolf.net
+          Suites: $distro
+          Components: main
+          Architectures: amd64
+          Signed-By: /usr/share/keyrings/librewolf.gpg
+          EOF
+
           sudo apt update
-          sudo apt install -y opera-stable brave-browser vivaldi-stable
+          sudo apt install -y opera-stable brave-browser vivaldi-stable librewolf
           
           # chrome, chromium, edge, and firefox are already installed
           # See: https://github.com/actions/runner-images/blob/main/images/linux/Ubuntu2204-Readme.md
+        
+      - name: Install patched geckodriver
+        run: |
+          tag=$(curl -fsSL 'https://api.github.com/repos/rafiibrahim8/geckodriver-unchained/releases/latest' | jq -r '.tag_name')
+          mkdir -p ~/.local/bin
+          curl -Lo ~/.local/bin/geckodriver "https://github.com/rafiibrahim8/geckodriver-unchained/releases/download/$tag/geckodriver-unchained-linux-$tag"
+          chmod +x ~/.local/bin/geckodriver
+          echo "GECKOWEBDRIVER=$HOME/.local/bin/geckodriver" >> "$GITHUB_ENV"
 
       - name: Install Python Dependencies
         run: |

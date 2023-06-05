@@ -1,14 +1,15 @@
-from http.server import BaseHTTPRequestHandler, HTTPServer
 import subprocess
 import tempfile
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
-DEFAULT_TIMEOUT = 30 # sec
+DEFAULT_TIMEOUT = 30  # sec
 _ua_list = []
 
-class HTTPRequestHandler(BaseHTTPRequestHandler):    
+
+class HTTPRequestHandler(BaseHTTPRequestHandler):
     def log_request(self, *args):
-        pass # No need to log
-    
+        pass  # No need to log
+
     def __handle_get_request(self):
         ua = self.headers.get('User-Agent')
         if ua:
@@ -22,6 +23,7 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.__handle_get_request()
 
+
 class UAGetter:
     HEADLESS_NEW = 'new'
     HEADLESS_OLD = 'old'
@@ -31,26 +33,28 @@ class UAGetter:
         self.__set_server()
         self.__temp_dir = tempfile.mkdtemp(prefix='browser_ua_')
         headless = f'--headless={headless_mode}' if headless_mode else '--headless'
-        self.__args = [binary_path, headless, '--disable-gpu', f'--user-data-dir={self.__temp_dir}']
-        self.server.timeout = timeout    
-    
+        self.__args = [binary_path, headless, '--disable-gpu',
+                       f'--user-data-dir={self.__temp_dir}']
+        self.server.timeout = timeout
+
     def __set_server(self):
         port = 55121
         while True:
             try:
                 server = HTTPServer(('127.0.0.1', port), HTTPRequestHandler)
                 break
-            except:
-                port+=1
+            except Exception:
+                port += 1
         self.server = server
-    
+
     def get(self):
         self.__args.append(f'http://127.0.0.1:{self.server.server_port}')
-        process = subprocess.Popen(self.__args, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+        process = subprocess.Popen(
+            self.__args, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
         self.server.handle_request()
         self.server.server_close()
 
         process.kill()
         process.wait()
-        
+
         return _ua_list[0] if _ua_list else None
