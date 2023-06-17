@@ -269,6 +269,11 @@ class Test(unittest.TestCase):
         self.__test_chromium_based(vivaldi)
 
     def test_z_load(self):
+        logger.info('Testing load() at the end of the test suite')
+        load()
+    
+    def test_a_load(self):
+        logger.info('Testing load() at the beginning of the test suite')
         load()
 
 

@@ -1,3 +1,5 @@
+### 0.19.1
+- [Firefox based] Fix an error when `load()` fails if librewolf or firefox is not installed
 ### 0.19.0
 - [MODULE] Added new browser support: LibreWolf
 - [MODULE] Added `immutable` mode for opening cookies database
