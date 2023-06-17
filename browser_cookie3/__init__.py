@@ -900,7 +900,7 @@ class FirefoxBased:
                 expanded = os.path.expanduser(path)
             if os.path.isdir(expanded):
                 return expanded
-        raise FileNotFoundError(
+        raise BrowserCookieError(
             f'Could not find {self.browser_name} profile directory')
 
     def __find_cookie_file(self, linux_data_dirs=None, windows_data_dirs=None, osx_data_dirs=None):
