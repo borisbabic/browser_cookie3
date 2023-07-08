@@ -17,6 +17,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Dict, List, Union
 
+
 if sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
     try:
         import jeepney
@@ -25,6 +26,15 @@ if sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
     except ImportError:
         import dbus
         USE_DBUS_LINUX = True
+
+
+shadowcopy = None
+if sys.platform == 'win32':
+    try:
+        import shadowcopy
+    except ImportError:
+        pass
+
 
 # external dependencies
 import lz4.block
@@ -340,10 +350,15 @@ class _DatabaseConnetion():
         self.__connection = None
         self.__methods = [
             self.__sqlite3_connect_readonly,
-            self.__get_connection_legacy,
         ]
+
         if try_legacy_first:
-            self.__methods.reverse()
+            self.__methods.insert(0, self.__get_connection_legacy)
+        else:
+            self.__methods.append(self.__get_connection_legacy)
+
+        if shadowcopy:
+            self.__methods.append(self.__get_connection_shadowcopy)
 
     def __enter__(self):
         return self.get_connection()
@@ -371,7 +386,21 @@ class _DatabaseConnetion():
     def __get_connection_legacy(self):
         self.__temp_cookie_file = tempfile.NamedTemporaryFile(
             suffix='.sqlite').name
-        shutil.copyfile(self.__database_file, self.__temp_cookie_file)
+        try:
+            shutil.copyfile(self.__database_file, self.__temp_cookie_file)
+        except PermissionError:
+            return
+        con = sqlite3.connect(self.__temp_cookie_file)
+        if self.__check_connection_ok(con):
+            return con
+
+    def __get_connection_shadowcopy(self):
+        if not shadowcopy:
+            raise RuntimeError("shadowcopy is not available")
+
+        self.__temp_cookie_file = tempfile.NamedTemporaryFile(
+            suffix='.sqlite').name
+        shadowcopy.shadow_copy(self.__database_file, self.__temp_cookie_file)
         con = sqlite3.connect(self.__temp_cookie_file)
         if self.__check_connection_ok(con):
             return con
