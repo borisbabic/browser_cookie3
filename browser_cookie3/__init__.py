@@ -15,7 +15,7 @@ import sys
 import tempfile
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Callable, Dict, List, Union
 
 if sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
     try:
@@ -1153,88 +1153,171 @@ def create_cookie(host, path, secure, expires, name, value, http_only):
                                  {'HTTPOnly': ''} if http_only else {})
 
 
-def chrome(cookie_file=None, domain_name="", key_file=None):
+def chrome(
+    cookie_file: Union[str, None] = None,
+    domain_name: str = "",
+    key_file: Union[str, None] = None,
+) -> Chrome:
     """Returns a cookiejar of the cookies used by Chrome. Optionally pass in a
     domain name to only load cookies from the specified domain
     """
     return Chrome(cookie_file, domain_name, key_file).load()
 
 
-def chromium(cookie_file=None, domain_name="", key_file=None):
+def chromium(
+    cookie_file: Union[str, None] = None,
+    domain_name: str = "",
+    key_file: Union[str, None] = None,
+) -> Chromium:
     """Returns a cookiejar of the cookies used by Chromium. Optionally pass in a
     domain name to only load cookies from the specified domain
     """
     return Chromium(cookie_file, domain_name, key_file).load()
 
 
-def opera(cookie_file=None, domain_name="", key_file=None):
+def opera(
+    cookie_file: Union[str, None] = None,
+    domain_name: str = "",
+    key_file: Union[str, None] = None,
+) -> Opera:
     """Returns a cookiejar of the cookies used by Opera. Optionally pass in a
     domain name to only load cookies from the specified domain
     """
     return Opera(cookie_file, domain_name, key_file).load()
 
 
-def opera_gx(cookie_file=None, domain_name="", key_file=None):
+def opera_gx(
+    cookie_file: Union[str, None] = None,
+    domain_name: str = "",
+    key_file: Union[str, None] = None,
+) -> OperaGX:
     """Returns a cookiejar of the cookies used by Opera GX. Optionally pass in a
     domain name to only load cookies from the specified domain
     """
     return OperaGX(cookie_file, domain_name, key_file).load()
 
 
-def brave(cookie_file=None, domain_name="", key_file=None):
+def brave(
+    cookie_file: Union[str, None] = None,
+    domain_name: str = "",
+    key_file: Union[str, None] = None,
+) -> Brave:
     """Returns a cookiejar of the cookies and sessions used by Brave. Optionally
     pass in a domain name to only load cookies from the specified domain
     """
     return Brave(cookie_file, domain_name, key_file).load()
 
 
-def edge(cookie_file=None, domain_name="", key_file=None):
+def edge(
+    cookie_file: Union[str, None] = None,
+    domain_name: str = "",
+    key_file: Union[str, None] = None,
+) -> Edge:
     """Returns a cookiejar of the cookies used by Microsoft Edge. Optionally pass in a
     domain name to only load cookies from the specified domain
     """
     return Edge(cookie_file, domain_name, key_file).load()
 
 
-def vivaldi(cookie_file=None, domain_name="", key_file=None):
+def vivaldi(
+    cookie_file: Union[str, None] = None,
+    domain_name: str = "",
+    key_file: Union[str, None] = None,
+) -> Vivaldi:
     """Returns a cookiejar of the cookies used by Vivaldi Browser. Optionally pass in a
     domain name to only load cookies from the specified domain
     """
     return Vivaldi(cookie_file, domain_name, key_file).load()
 
 
-def firefox(cookie_file=None, domain_name=""):
+def firefox(
+    cookie_file: Union[str, None] = None,
+    domain_name: str = "",
+    key_file: Union[str, None] = None,
+) -> Firefox:
     """Returns a cookiejar of the cookies and sessions used by Firefox. Optionally
     pass in a domain name to only load cookies from the specified domain
     """
     return Firefox(cookie_file, domain_name).load()
 
 
-def librewolf(cookie_file=None, domain_name=""):
+def librewolf(
+    cookie_file: Union[str, None] = None,
+    domain_name: str = "",
+    key_file: Union[str, None] = None,
+) -> LibreWolf:
     """Returns a cookiejar of the cookies and sessions used by LibreWolf. Optionally
     pass in a domain name to only load cookies from the specified domain
     """
     return LibreWolf(cookie_file, domain_name).load()
 
 
-def safari(cookie_file=None, domain_name=""):
+def safari(
+    cookie_file: Union[str, None] = None,
+    domain_name: str = "",
+    key_file: Union[str, None] = None,
+) -> Safari:
     """Returns a cookiejar of the cookies and sessions used by Safari. Optionally
     pass in a domain name to only load cookies from the specified domain
     """
     return Safari(cookie_file, domain_name).load()
 
 
-def load(domain_name=""):
+SUPPORTED_BROWSERS = {
+    "chrome": chrome,
+    "chromium": chromium,
+    "opera": opera,
+    "opera_gx": opera_gx,
+    "brave": brave,
+    "edge": edge,
+    "vivaldi": vivaldi,
+    "firefox": firefox,
+    "librewolf": librewolf,
+    "safari": safari,
+}
+
+
+def get_browser(browser: str) -> Callable:
+    """Get the cookie function for a specific browser."""
+    if browser not in SUPPORTED_BROWSERS.keys():
+        raise BrowserCookieError(f"{browser} is not a supported browser")
+    return SUPPORTED_BROWSERS[browser]
+
+
+def load(domain_name: str = ""):
     """Try to load cookies from all supported browsers and return combined cookiejar
     Optionally pass in a domain name to only load cookies from the specified domain
     """
     cj = http.cookiejar.CookieJar()
-    for cookie_fn in [chrome, chromium, opera, opera_gx, brave, edge, vivaldi, firefox, librewolf, safari]:
+    for cookie_fn in SUPPORTED_BROWSERS.values():
         try:
             for cookie in cookie_fn(domain_name=domain_name):
                 cj.set_cookie(cookie)
         except BrowserCookieError:
             pass
     return cj
+
+
+class BrowserCookieJar(http.cookiejar.CookieJar):
+
+    def __init__(
+        self,
+        browser: str,
+        cookie_file: Union[str, None] = None,
+        domain_name: str = "",
+        key_file: Union[str, None] = None,
+        *args,
+        **kwargs,
+    ):
+        if browser not in SUPPORTED_BROWSERS.keys():
+            raise BrowserCookieError(f"{browser} is not a supported browser")
+        super().__init__(*args, **kwargs)
+        for cookie in SUPPORTED_BROWSERS[browser](
+            cookie_file,
+            domain_name,
+            key_file
+        ):
+            self.set_cookie(cookie)
 
 
 if __name__ == '__main__':
