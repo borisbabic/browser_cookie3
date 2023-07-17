@@ -14,7 +14,8 @@ setup(
         'lz4',
         'pycryptodomex',
         'dbus-python; python_version < "3.7" and ("bsd" in sys_platform or sys_platform == "linux")',
-        'jeepney; python_version >= "3.7" and ("bsd" in sys_platform or sys_platform == "linux")'
+        'jeepney; python_version >= "3.7" and ("bsd" in sys_platform or sys_platform == "linux")',
+        'shadowcopy; python_version >= "3.7" and platform_system == "Windows"',
     ],
     license='lgpl'
 )
