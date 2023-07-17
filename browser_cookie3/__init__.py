@@ -937,7 +937,8 @@ class FirefoxBased:
         if not os.path.exists(self.session_file):
             return
         try:
-            json_data = json.load(self.session_file)
+            with open(self.session_file, 'rb') as file_obj:
+                json_data = json.load(file_obj)
         except ValueError as e:
             print(f'Error parsing {self.browser_name} session JSON:', str(e))
         else:
