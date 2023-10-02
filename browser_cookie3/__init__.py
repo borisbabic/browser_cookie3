@@ -369,8 +369,8 @@ class _DatabaseConnetion():
                 return con
 
     def __get_connection_legacy(self):
-        self.__temp_cookie_file = tempfile.NamedTemporaryFile(
-            suffix='.sqlite').name
+        with tempfile.NamedTemporaryFile(suffix='.sqlite') as tf:
+            self.__temp_cookie_file = tf.name
         shutil.copyfile(self.__database_file, self.__temp_cookie_file)
         con = sqlite3.connect(self.__temp_cookie_file)
         if self.__check_connection_ok(con):
