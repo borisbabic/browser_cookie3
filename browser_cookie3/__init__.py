@@ -489,6 +489,7 @@ class ChromiumBased:
         with _DatabaseConnetion(self.cookie_file) as con:
             con.text_factory = _text_factory
             cur = con.cursor()
+            has_integrity_check_for_cookie_domain = self._has_integrity_check_for_cookie_domain(cur)
             try:
                 # chrome <=55
                 cur.execute('SELECT host_key, path, secure, expires_utc, name, value, encrypted_value, is_httponly '
@@ -512,11 +513,33 @@ class ChromiumBased:
                     expires = (expires_nt_time_epoch / 1000000) - \
                         self.UNIX_TO_NT_EPOCH_OFFSET
 
-                value = self._decrypt(value, enc_value)
+                value = self._decrypt(value, enc_value, has_integrity_check_for_cookie_domain)
                 c = create_cookie(host, path, secure, expires,
                                   name, value, http_only)
                 cj.set_cookie(c)
         return cj
+
+    @staticmethod
+    def _has_integrity_check_for_cookie_domain(con):
+        """Starting from version 24, the sha256 of the domain is prepended to the encrypted value
+        of the cookie.
+
+        See:
+            - https://issues.chromium.org/issues/40185252
+            - https://chromium-review.googlesource.com/c/chromium/src/+/5792044
+            - https://chromium.googlesource.com/chromium/src/net/+/master/extras/sqlite/sqlite_persistent_cookie_store.cc#193
+        """
+        try:
+            value, = con.execute('SELECT value FROM meta WHERE key = "version";').fetchone()
+        except sqlite3.OperationalError:
+            return False
+
+        try:
+            version = int(value)
+        except ValueError:
+            return False
+
+        return version >= 24
 
     @staticmethod
     def _decrypt_windows_chromium(value, encrypted_value):
@@ -531,7 +554,7 @@ class ChromiumBased:
         assert isinstance(data, bytes)
         return data.decode()
 
-    def _decrypt(self, value, encrypted_value):
+    def _decrypt(self, value, encrypted_value, has_integrity_check_for_cookie_domain=False):
         """Decrypt encoded cookies"""
 
         if sys.platform == 'win32':
@@ -556,6 +579,8 @@ class ChromiumBased:
                 except ValueError:
                     raise BrowserCookieError(
                         'Unable to get key for cookie decryption')
+                if has_integrity_check_for_cookie_domain:
+                    data = data[32:]
                 return data.decode()
 
         if value or (encrypted_value[:3] not in [b'v11', b'v10']):
@@ -579,6 +604,8 @@ class ChromiumBased:
             try:
                 decrypted = unpad(cipher.decrypt(
                     encrypted_value), AES.block_size)
+                if has_integrity_check_for_cookie_domain:
+                    decrypted = decrypted[32:]
                 return decrypted.decode('utf-8')
             except ValueError:
                 pass
