@@ -86,6 +86,32 @@ Alternatively if you are only interested in cookies from a specific domain, you 
 >>> get_title(r.content)
 'richardpenman / home &mdash; Bitbucket'
 ```
+
+If you want to get a standard `http.cookiejar.CookieJar` object to work with, use the `BrowserCookieJar` constructor, passing a specific browser name. It can also take an optional domain name.
+```python
+#!python
+
+>>> import browser_cookie3
+>>> import requests
+>>> cj = browser_cookie3.BrowserCookieJar('chrome', domain_name='www.bitbucket.com')
+>>> r = requests.get(url, cookies=cj)
+>>> get_title(r.content)
+'richardpenman / home &mdash; Bitbucket'
+```
+
+If you just want the browser-specific function, use `get_browser`.
+```python
+#!python
+
+>>> import browser_cookie3
+>>> import requests
+>>> func = browser_cookie3.get_browser('chrome')
+>>> cj = func(domain_name='www.bitbucket.com')
+>>> r = requests.get(url, cookies=cj)
+>>> get_title(r.content)
+'richardpenman / home &mdash; Bitbucket'
+```
+
 ## Fresh cookie files
 Creating and testing a fresh cookie file can help eliminate some possible user specific issues. It also allows you to upload a cookie file you are having issues with, since you should never upload your main cookie file!
 ### Chrome and chromium
