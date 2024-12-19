@@ -8,8 +8,8 @@ This is a python3 fork of [Richard Penman's Browser Cookie](https://github.com/r
 
 * ***What does it do?*** Loads cookies used by your web browser into a cookiejar object.
 * ***Why is it useful?*** This means you can use python to download and get the same content you see in the web browser without needing to login.
-* ***Which browsers are supported?*** Chrome, Firefox, LibreWolf, Opera, Opera GX, Edge, Chromium, Brave, Vivaldi, and Safari.
-* ***How are the cookies stored?*** All currently-supported browsers store cookies in a sqlite database in your home directory.
+* ***Which browsers are supported?*** Chrome, Firefox, LibreWolf, Opera, Opera GX, Edge, Chromium, Brave, Vivaldi, Safari, W3m and Lynx.
+* ***How are the cookies stored?*** Most currently-supported browsers store cookies in a sqlite database in your home directory. Some browsers store them in tab-separated txt files.
 
 ## Install
 ```bash
@@ -111,6 +111,8 @@ So far the following platforms are supported:
 * **Brave:** Linux, MacOS, Windows
 * **Vivaldi:** Linux, MacOS, Windows
 * **Safari:** MacOS
+* **W3m:** Linux
+* **Lynx:** Linux
 
 You are welcome to contribute support for other browsers, or other platforms.
 
@@ -128,6 +130,8 @@ Chromium | 07/24/21 | 15/06/22 | 15/06/22 |
 Brave    | 31/01/23 | 31/01/23 | 31/01/23 |
 Vivaldi  | 31/01/23 | 31/01/23 | 15/06/22 |
 Safari   |    -     | 31/01/23 |    -     |
+W3m      | 05/07/23 |    -     |    -     |
+Lynx     | 05/07/23 |    -     |    -     |
 
 However I only tested on a single version of each browser and so am not sure if the cookie sqlite format changes location or format in earlier/later versions. If you experience a problem please [open an issue](https://github.com/borisbabic/browser_cookie3/issues/new) which includes details of the browser version and operating system. Also patches to support other browsers are very welcome, particularly for Chrome and Internet Explorer on Windows.
 

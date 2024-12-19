@@ -1173,6 +1173,79 @@ class Safari:
         return cj
 
 
+class Lynx:
+    """Class for Lynx"""
+
+    lynx_cookies = [
+        '~/.lynx_cookies', # most systems, see lynx man page
+        '~/cookies'        # MS-DOS
+    ]
+
+    def __init__(self, cookie_file=None, domain_name=""):
+        self.cookie_file = _expand_paths(cookie_file or self.lynx_cookies, 'linux')
+        self.domain_name = domain_name
+
+    def load(self):
+        cj = http.cookiejar.CookieJar()
+        if not self.cookie_file:
+            raise BrowserCookieError('Cannot find Lynx cookie file')
+        with open(self.cookie_file) as f:
+            for line in f.read().splitlines():
+                # documentation in source code of lynx, file src/LYCookie.c
+                domain, domain_specified, path, secure, expires, name, value = \
+                        [None if word == '' else word for word in line.split('\t')]
+                domain_specified = domain_specified == 'TRUE'
+                secure = secure == 'TRUE'
+                if domain.find(self.domain_name) >= 0:
+                    cookie = create_cookie(domain, path, secure, expires, name,
+                            value, False)
+                    cj.set_cookie(cookie)
+        return cj
+
+
+class W3m:
+    """Class for W3m"""
+
+    # see documentation in source code of w3m, file fm.h
+    COO_USE = 1
+    COO_SECURE = 2
+    COO_DOMAIN = 4
+    COO_PATH = 8
+    COO_DISCARD = 16
+    COO_OVERRIDE = 32
+    w3m_cookies = [
+        '~/.w3m/cookie'
+    ]
+
+    def __init__(self, cookie_file=None, domain_name=""):
+        self.cookie_file = _expand_paths(cookie_file or self.w3m_cookies, 'linux')
+        self.domain_name = domain_name
+
+    def load(self):
+        cj = http.cookiejar.CookieJar()
+        if not self.cookie_file:
+            raise BrowserCookieError('Cannot find W3m cookie file')
+        with open(self.cookie_file) as f:
+            for line in f.read().splitlines():
+                # see documentation in source code of w3m, file cookie.c
+                url, name, value, expires, domain, path, flag, version, comment, \
+                        port, comment_url = \
+                        [None if word == '' else word for word in line.split('\t')]
+                flag = int(flag)
+                expires = int(expires)
+                secure = bool(flag & self.COO_SECURE)
+                domain_specified = bool(flag & self.COO_DOMAIN)
+                path_specified = bool(flag & self.COO_PATH)
+                discard = bool(flag & self.COO_DISCARD)
+                if domain.find(self.domain_name) >= 0:
+                    cookie = http.cookiejar.Cookie(version, name, value, port,
+                            bool(port), domain, domain_specified,
+                            domain.startswith('.'), path, path_specified, secure,
+                            expires, discard, comment, comment_url, {})
+                    cj.set_cookie(cookie)
+        return cj
+
+
 def create_cookie(host, path, secure, expires, name, value, http_only):
     """Shortcut function to create a cookie"""
     # HTTPOnly flag goes in _rest, if present (see https://github.com/python/cpython/pull/17471/files#r511187060)
@@ -1249,6 +1322,20 @@ def safari(cookie_file=None, domain_name=""):
     pass in a domain name to only load cookies from the specified domain
     """
     return Safari(cookie_file, domain_name).load()
+
+
+def lynx(cookie_file=None, domain_name=""):
+    """Returns a cookiejar of the cookies and sessions used by Lynx. Optionally
+    pass in a domain name to only load cookies from the specified domain
+    """
+    return Lynx(cookie_file, domain_name).load()
+
+
+def w3m(cookie_file=None, domain_name=""):
+    """Returns a cookiejar of the cookies and sessions used by W3m. Optionally
+    pass in a domain name to only load cookies from the specified domain
+    """
+    return W3m(cookie_file, domain_name).load()
 
 
 def load(domain_name=""):
