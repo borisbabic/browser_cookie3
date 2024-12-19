@@ -654,6 +654,26 @@ class Chrome(ChromiumBased):
                          domain_name=domain_name, key_file=key_file, **args)
 
 
+class Arc(ChromiumBased):
+    """Class for Arc"""
+
+    def __init__(self, cookie_file=None, domain_name="", key_file=None):
+        args = {
+            'osx_cookies': _genarate_nix_paths_chromium(
+                [
+                    '~/Library/Application Support/Arc/User Data/Default/Cookies',
+                    '~/Library/Application Support/Arc/User Data/Profile */Cookies'
+                ],
+                channel=['']
+            ),
+            'os_crypt_name': 'chrome',
+            'osx_key_service': 'Arc Safe Storage',
+            'osx_key_user': 'Arc'
+        }
+        super().__init__(browser='Arc', cookie_file=cookie_file,
+                         domain_name=domain_name, key_file=key_file, **args)
+
+
 class Chromium(ChromiumBased):
     """Class for Chromium"""
 
@@ -1259,6 +1279,13 @@ def chrome(cookie_file=None, domain_name="", key_file=None):
     domain name to only load cookies from the specified domain
     """
     return Chrome(cookie_file, domain_name, key_file).load()
+
+
+def arc(cookie_file=None, domain_name="", key_file=None):
+    """Returns a cookiejar of the cookies used by Arc. Optionally pass in a
+    domain name to only load cookies from the specified domain
+    """
+    return Arc(cookie_file, domain_name, key_file).load()
 
 
 def chromium(cookie_file=None, domain_name="", key_file=None):
