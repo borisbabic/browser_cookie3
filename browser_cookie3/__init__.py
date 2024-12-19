@@ -384,8 +384,8 @@ class _DatabaseConnetion():
                 return con
 
     def __get_connection_legacy(self):
-        self.__temp_cookie_file = tempfile.NamedTemporaryFile(
-            suffix='.sqlite').name
+        with tempfile.NamedTemporaryFile(suffix='.sqlite') as tf:
+            self.__temp_cookie_file = tf.name
         try:
             shutil.copyfile(self.__database_file, self.__temp_cookie_file)
         except PermissionError:
