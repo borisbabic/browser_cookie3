@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='browser-cookie3',
-    version='0.19.1',
+    version='0.19.2',
     packages=['browser_cookie3'],
     # look for package contents in current directory
     package_dir={'browser_cookie3': 'browser_cookie3'},
@@ -14,7 +14,8 @@ setup(
         'lz4',
         'pycryptodomex',
         'dbus-python; python_version < "3.7" and ("bsd" in sys_platform or sys_platform == "linux")',
-        'jeepney; python_version >= "3.7" and ("bsd" in sys_platform or sys_platform == "linux")'
+        'jeepney; python_version >= "3.7" and ("bsd" in sys_platform or sys_platform == "linux")',
+        'shadowcopy; python_version >= "3.7" and platform_system == "Windows"',
     ],
     license='lgpl'
 )
