@@ -17,5 +17,6 @@ setup(
         'jeepney; python_version >= "3.7" and ("bsd" in sys_platform or sys_platform == "linux")',
         'shadowcopy; python_version >= "3.7" and platform_system == "Windows"',
     ],
+    entry_points={'console_scripts': ['browser-cookie=browser_cookie3.__main__:main']},
     license='lgpl'
 )

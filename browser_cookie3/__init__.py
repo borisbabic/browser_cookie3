@@ -504,7 +504,7 @@ class ChromiumBased:
 
         if not cookie_file:
             raise BrowserCookieError(
-                'Failed to find {} cookie'.format(self.browser))
+                'Failed to find cookies for {} browser'.format(self.browser))
 
         self.cookie_file = cookie_file
 
@@ -524,9 +524,14 @@ class ChromiumBased:
                 cur.execute('SELECT host_key, path, secure, expires_utc, name, value, encrypted_value, is_httponly '
                             'FROM cookies WHERE host_key like ?;', ('%{}%'.format(self.domain_name),))
             except sqlite3.OperationalError:
-                # chrome >=56
-                cur.execute('SELECT host_key, path, is_secure, expires_utc, name, value, encrypted_value, is_httponly '
-                            'FROM cookies WHERE host_key like ?;', ('%{}%'.format(self.domain_name),))
+                try:
+                    # chrome >=56
+                    cur.execute('SELECT host_key, path, is_secure, expires_utc, name, value, encrypted_value, is_httponly '
+                                'FROM cookies WHERE host_key like ?;', ('%{}%'.format(self.domain_name),))
+                except sqlite3.OperationalError as e:
+                    if e.args[0].startswith(('no such table: ', 'file is not a database')):
+                        raise BrowserCookieError('File {} is not a Chromium-based browser cookie file'.format(self.tmp_cookie_file))
+
 
             for item in cur.fetchall():
                 # Per https://github.com/chromium/chromium/blob/main/base/time/time.h#L5-L7,
@@ -921,7 +926,7 @@ class Vivaldi(ChromiumBased):
 class FirefoxBased:
     """Superclass for Firefox based browsers"""
 
-    def __init__(self, browser_name, cookie_file=None, domain_name="", **kwargs):
+    def __init__(self, browser_name, cookie_file=None, domain_name="", key_file=None, **kwargs):
         self.browser_name = browser_name
         self.cookie_file = cookie_file or self.__find_cookie_file(**kwargs)
         # current sessions are saved in sessionstore.js
@@ -1044,8 +1049,13 @@ class FirefoxBased:
         # firefoxbased seems faster with legacy mode
         with _DatabaseConnetion(self.cookie_file, True) as con:
             cur = con.cursor()
-            cur.execute('select host, path, isSecure, expiry, name, value, isHttpOnly from moz_cookies '
-                        'where host like ?', ('%{}%'.format(self.domain_name),))
+            try:
+                cur.execute('select host, path, isSecure, expiry, name, value, isHttpOnly from moz_cookies '
+                            'where host like ?', ('%{}%'.format(self.domain_name),))
+            except sqlite3.DatabaseError as e:
+                if e.args[0].startswith(('no such table: ', 'file is not a database')):
+                    raise BrowserCookieError('File {} is not a Firefox cookie file'.format(self.tmp_cookie_file))
+                raise
 
             for item in cur.fetchall():
                 host, path, secure, expires, name, value, http_only = item
@@ -1062,7 +1072,7 @@ class FirefoxBased:
 class Firefox(FirefoxBased):
     """Class for Firefox"""
 
-    def __init__(self, cookie_file=None, domain_name=""):
+    def __init__(self, cookie_file=None, domain_name="", key_file=None):
         args = {
             'linux_data_dirs': [
                 '~/snap/firefox/common/.mozilla/firefox',
@@ -1076,13 +1086,13 @@ class Firefox(FirefoxBased):
                 '~/Library/Application Support/Firefox'
             ]
         }
-        super().__init__('Firefox', cookie_file, domain_name, **args)
+        super().__init__('Firefox', cookie_file, domain_name, key_file, **args)
 
 
 class LibreWolf(FirefoxBased):
     """Class for LibreWolf"""
 
-    def __init__(self, cookie_file=None, domain_name=""):
+    def __init__(self, cookie_file=None, domain_name="", key_file=None):
         args = {
             'linux_data_dirs': [
                 '~/snap/librewolf/common/.librewolf',
@@ -1096,7 +1106,7 @@ class LibreWolf(FirefoxBased):
                 '~/Library/Application Support/librewolf'
             ]
         }
-        super().__init__('LibreWolf', cookie_file, domain_name, **args)
+        super().__init__('LibreWolf', cookie_file, domain_name, key_file, **args)
 
 
 class Safari:
@@ -1110,7 +1120,7 @@ class Safari:
         '~/Library/Cookies/Cookies.binarycookies'
     ]
 
-    def __init__(self, cookie_file=None, domain_name="") -> None:
+    def __init__(self, cookie_file=None, domain_name="", key_file=None) -> None:
         self.__offset = 0
         self.__domain_name = domain_name
         self.__buffer = None
@@ -1359,25 +1369,28 @@ def vivaldi(cookie_file=None, domain_name="", key_file=None):
     return Vivaldi(cookie_file, domain_name, key_file).load()
 
 
-def firefox(cookie_file=None, domain_name=""):
+def firefox(cookie_file=None, domain_name="", key_file=None):
     """Returns a cookiejar of the cookies and sessions used by Firefox. Optionally
     pass in a domain name to only load cookies from the specified domain
     """
-    return Firefox(cookie_file, domain_name).load()
+    return Firefox(cookie_file, domain_name, key_file).load()
 
 
-def librewolf(cookie_file=None, domain_name=""):
+def librewolf(cookie_file=None, domain_name="", key_file=None):
     """Returns a cookiejar of the cookies and sessions used by LibreWolf. Optionally
     pass in a domain name to only load cookies from the specified domain
     """
-    return LibreWolf(cookie_file, domain_name).load()
+    return LibreWolf(cookie_file, domain_name, key_file).load()
 
 
-def safari(cookie_file=None, domain_name=""):
+def safari(cookie_file=None, domain_name="", key_file=None):
     """Returns a cookiejar of the cookies and sessions used by Safari. Optionally
     pass in a domain name to only load cookies from the specified domain
     """
-    return Safari(cookie_file, domain_name).load()
+    return Safari(cookie_file, domain_name, key_file).load()
+
+
+all_browsers = [chrome, chromium, opera, opera_gx, brave, edge, vivaldi, firefox, librewolf, safari, lynx, w3m, arc]
 
 
 def lynx(cookie_file=None, domain_name=""):
@@ -1399,13 +1412,16 @@ def load(domain_name=""):
     Optionally pass in a domain name to only load cookies from the specified domain
     """
     cj = http.cookiejar.CookieJar()
-    for cookie_fn in [chrome, chromium, opera, opera_gx, brave, edge, vivaldi, firefox, librewolf, safari]:
+    for cookie_fn in all_browsers:
         try:
             for cookie in cookie_fn(domain_name=domain_name):
                 cj.set_cookie(cookie)
         except BrowserCookieError:
             pass
     return cj
+
+
+__all__ = ['BrowserCookieError', 'load', 'all_browsers'] + all_browsers
 
 
 if __name__ == '__main__':
