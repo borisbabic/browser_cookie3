@@ -1,4 +1,10 @@
-- [MODULE] Added new browser support: Lynx and W3m
+### 0.20.0
+- [CLI] Add browser-cookie cli
+- [MODULE] Added new browser support: Lynx, W3m, and Arc
+- [MODULE] Avoid ResourceWarning
+- [Win32] Support shadowcopy if we can't get cookies the normal way
+### 0.19.2
+- [Chromium based] Handle latest sqlite schema
 ### 0.19.1
 - [Firefox based] Fix an error when `load()` fails if librewolf or firefox is not installed
 ### 0.19.0
