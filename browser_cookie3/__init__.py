@@ -1389,10 +1389,6 @@ def safari(cookie_file=None, domain_name="", key_file=None):
     """
     return Safari(cookie_file, domain_name, key_file).load()
 
-
-all_browsers = [chrome, chromium, opera, opera_gx, brave, edge, vivaldi, firefox, librewolf, safari, lynx, w3m, arc]
-
-
 def lynx(cookie_file=None, domain_name=""):
     """Returns a cookiejar of the cookies and sessions used by Lynx. Optionally
     pass in a domain name to only load cookies from the specified domain
@@ -1406,6 +1402,7 @@ def w3m(cookie_file=None, domain_name=""):
     """
     return W3m(cookie_file, domain_name).load()
 
+all_browsers = [chrome, chromium, opera, opera_gx, brave, edge, vivaldi, firefox, librewolf, safari, lynx, w3m, arc]
 
 def load(domain_name=""):
     """Try to load cookies from all supported browsers and return combined cookiejar

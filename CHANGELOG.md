@@ -1,3 +1,5 @@
+### 0.21.0
+- [MODULE] Fix lynx issue
 ### 0.20.0
 - [CLI] Add browser-cookie cli
 - [MODULE] Added new browser support: Lynx, W3m, and Arc
