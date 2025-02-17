@@ -693,6 +693,7 @@ class Arc(ChromiumBased):
 
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
         args = {
+            'linux_cookies': [],  # Not available on Linux
             'osx_cookies': _genarate_nix_paths_chromium(
                 [
                     '~/Library/Application Support/Arc/User Data/Default/Cookies',
