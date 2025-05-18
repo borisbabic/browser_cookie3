@@ -133,6 +133,9 @@ def _expand_paths_impl(paths: list, os_name: str):
     os_name = os_name.lower()
     assert os_name in ['windows', 'osx', 'linux']
 
+    if paths is None:
+        paths = []
+
     if not isinstance(paths, list):
         paths = [paths]
 
