@@ -1076,6 +1076,7 @@ class Firefox(FirefoxBased):
         args = {
             'linux_data_dirs': [
                 '~/snap/firefox/common/.mozilla/firefox',
+                '~/.var/app/org.mozilla.firefox/.mozilla/firefox',
                 '~/.mozilla/firefox'
             ],
             'windows_data_dirs': [
