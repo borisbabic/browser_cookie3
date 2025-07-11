@@ -1073,6 +1073,15 @@ class Firefox(FirefoxBased):
     """Class for Firefox"""
 
     def __init__(self, cookie_file=None, domain_name="", key_file=None):
+        #Firefox MSiX version directory:
+        #https://support.mozilla.org/en-US/questions/1460897
+        win_packages = _expand_win_path({'env': 'LOCALAPPDATA', 'path': r'Packages'})
+        firefox_package_dir = glob.glob('Mozilla.Firefox*', root_dir=win_packages)
+        if firefox_package_dir:
+            win_msix_dir = r'Packages\\' + firefox_package_dir[0] + r'\LocalCache\Roaming\Mozilla\Firefox'
+        else:
+            win_msix_dir = ''
+        
         args = {
             'linux_data_dirs': [
                 '~/snap/firefox/common/.mozilla/firefox',
@@ -1080,7 +1089,8 @@ class Firefox(FirefoxBased):
             ],
             'windows_data_dirs': [
                 {'env': 'APPDATA', 'path': r'Mozilla\Firefox'},
-                {'env': 'LOCALAPPDATA', 'path': r'Mozilla\Firefox'}
+                {'env': 'LOCALAPPDATA', 'path': r'Mozilla\Firefox'},
+                {'env': 'LOCALAPPDATA', 'path': win_msix_dir}
             ],
             'osx_data_dirs': [
                 '~/Library/Application Support/Firefox'
