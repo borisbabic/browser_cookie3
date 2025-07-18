@@ -4,6 +4,8 @@
 
 This is a python3 fork of [Richard Penman's Browser Cookie](https://github.com/richardpenman/browsercookie)
 
+Cookies v20 decryption is based on [https://github.com/runassu/chrome_v20_decryption](https://github.com/runassu/chrome_v20_decryption)
+
 # Browser Cookie
 
 * ***What does it do?*** Loads cookies used by your web browser into a cookiejar object.

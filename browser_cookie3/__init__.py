@@ -13,6 +13,8 @@ import struct
 import subprocess
 import sys
 import tempfile
+import ctypes
+import binascii
 from io import BytesIO
 from pathlib import Path
 from typing import Dict, List, Union
@@ -29,16 +31,24 @@ if sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
 
 
 shadowcopy = None
+windows = None
 if sys.platform == 'win32':
     try:
         import shadowcopy
     except ImportError:
         pass
+    try:
+        import windows
+        import windows.security
+        import windows.crypto
+        import windows.generated_def as gdef
+    except ImportError:
+        windows = None
 
 
 # external dependencies
 import lz4.block
-from Cryptodome.Cipher import AES
+from Cryptodome.Cipher import AES, ChaCha20_Poly1305
 from Cryptodome.Protocol.KDF import PBKDF2
 from Cryptodome.Util.Padding import unpad
 
@@ -66,6 +76,138 @@ def _windows_group_policy_path():
     except OSError:
         return None
     return os.path.join(user_data_dir, "Default", "Cookies")
+
+
+def _is_admin():
+    """Check if running as administrator on Windows"""
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin() != 0
+    except:
+        return False
+
+
+@contextlib.contextmanager
+def _impersonate_lsass():
+    """Impersonate lsass.exe to get SYSTEM privilege"""
+    if not windows:
+        raise RuntimeError("Windows module not available")
+    
+    original_token = windows.current_thread.token
+    try:
+        windows.current_process.token.enable_privilege("SeDebugPrivilege")
+        proc = next(p for p in windows.system.processes if p.name == "lsass.exe")
+        lsass_token = proc.token
+        impersonation_token = lsass_token.duplicate(
+            type=gdef.TokenImpersonation,
+            impersonation_level=gdef.SecurityImpersonation
+        )
+        windows.current_thread.token = impersonation_token
+        yield
+    finally:
+        windows.current_thread.token = original_token
+
+
+def _parse_key_blob(blob_data: bytes) -> dict:
+    """Parse Chrome v20 key blob"""
+    buffer = BytesIO(blob_data)
+    parsed_data = {}
+
+    header_len = struct.unpack('<I', buffer.read(4))[0]
+    parsed_data['header'] = buffer.read(header_len)
+    content_len = struct.unpack('<I', buffer.read(4))[0]
+    assert header_len + content_len + 8 == len(blob_data)
+    
+    parsed_data['flag'] = buffer.read(1)[0]
+    
+    if parsed_data['flag'] == 1 or parsed_data['flag'] == 2:
+        # [flag|iv|ciphertext|tag] decrypted_blob
+        # [1byte|12bytes|32bytes|16bytes]
+        parsed_data['iv'] = buffer.read(12)
+        parsed_data['ciphertext'] = buffer.read(32)
+        parsed_data['tag'] = buffer.read(16)
+    elif parsed_data['flag'] == 3:
+        # [flag|encrypted_aes_key|iv|ciphertext|tag] decrypted_blob
+        # [1byte|32bytes|12bytes|32bytes|16bytes]
+        parsed_data['encrypted_aes_key'] = buffer.read(32)
+        parsed_data['iv'] = buffer.read(12)
+        parsed_data['ciphertext'] = buffer.read(32)
+        parsed_data['tag'] = buffer.read(16)
+    else:
+        raise ValueError(f"Unsupported flag: {parsed_data['flag']}")
+
+    return parsed_data
+
+
+def _decrypt_with_cng(input_data):
+    """Decrypt using Windows CNG API"""
+    ncrypt = ctypes.windll.NCRYPT
+    hProvider = gdef.NCRYPT_PROV_HANDLE()
+    provider_name = "Microsoft Software Key Storage Provider"
+    status = ncrypt.NCryptOpenStorageProvider(ctypes.byref(hProvider), provider_name, 0)
+    assert status == 0, f"NCryptOpenStorageProvider failed with status {status}"
+
+    hKey = gdef.NCRYPT_KEY_HANDLE()
+    key_name = "Google Chromekey1"
+    status = ncrypt.NCryptOpenKey(hProvider, ctypes.byref(hKey), key_name, 0, 0)
+    assert status == 0, f"NCryptOpenKey failed with status {status}"
+
+    pcbResult = gdef.DWORD(0)
+    input_buffer = (ctypes.c_ubyte * len(input_data)).from_buffer_copy(input_data)
+
+    status = ncrypt.NCryptDecrypt(
+        hKey,
+        input_buffer,
+        len(input_buffer),
+        None,
+        None,
+        0,
+        ctypes.byref(pcbResult),
+        0x40   # NCRYPT_SILENT_FLAG
+    )
+    assert status == 0, f"1st NCryptDecrypt failed with status {status}"
+
+    buffer_size = pcbResult.value
+    output_buffer = (ctypes.c_ubyte * pcbResult.value)()
+
+    status = ncrypt.NCryptDecrypt(
+        hKey,
+        input_buffer,
+        len(input_buffer),
+        None,
+        output_buffer,
+        buffer_size,
+        ctypes.byref(pcbResult),
+        0x40   # NCRYPT_SILENT_FLAG
+    )
+    assert status == 0, f"2nd NCryptDecrypt failed with status {status}"
+
+    ncrypt.NCryptFreeObject(hKey)
+    ncrypt.NCryptFreeObject(hProvider)
+
+    return bytes(output_buffer[:pcbResult.value])
+
+
+def _byte_xor(ba1, ba2):
+    """XOR two byte arrays"""
+    return bytes([_a ^ _b for _a, _b in zip(ba1, ba2)])
+
+
+def _derive_v20_master_key(parsed_data: dict) -> bytes:
+    """Derive Chrome v20 master key"""
+    if parsed_data['flag'] == 1:
+        aes_key = bytes.fromhex("B31C6E241AC846728DA9C1FAC4936651CFFB944D143AB816276BCC6DA0284787")
+        cipher = AES.new(aes_key, AES.MODE_GCM, nonce=parsed_data['iv'])
+    elif parsed_data['flag'] == 2:
+        chacha20_key = bytes.fromhex("E98F37D7F4E1FA433D19304DC2258042090E2D1D7EEA7670D41F738D08729660")
+        cipher = ChaCha20_Poly1305.new(key=chacha20_key, nonce=parsed_data['iv'])
+    elif parsed_data['flag'] == 3:
+        xor_key = bytes.fromhex("CCF8A1CEC56605B8517552BA1A2D061C03A29E90274FB2FCF59BA4B75C392390")
+        with _impersonate_lsass():
+            decrypted_aes_key = _decrypt_with_cng(parsed_data['encrypted_aes_key'])
+        xored_aes_key = _byte_xor(decrypted_aes_key, xor_key)
+        cipher = AES.new(xored_aes_key, AES.MODE_GCM, nonce=parsed_data['iv'])
+
+    return cipher.decrypt_and_verify(parsed_data['ciphertext'], parsed_data['tag'])
 
 
 # Code adapted slightly from https://github.com/Arnie97/chrome-cookies
@@ -478,15 +620,45 @@ class ChromiumBased:
             if key_file:
                 with open(key_file, 'rb') as f:
                     key_file_json = json.load(f)
-                    key64 = key_file_json['os_crypt']['encrypted_key'].encode(
-                        'utf-8')
-
-                    # Decode Key, get rid of DPAPI prefix, unprotect data
-                    keydpapi = base64.standard_b64decode(key64)[5:]
-                    _, self.v10_key = _crypt_unprotect_data(
-                        keydpapi, is_key=True)
+                    
+                    # Handle v10 encrypted_key
+                    if 'encrypted_key' in key_file_json['os_crypt']:
+                        key64 = key_file_json['os_crypt']['encrypted_key'].encode('utf-8')
+                        # Decode Key, get rid of DPAPI prefix, unprotect data
+                        keydpapi = base64.standard_b64decode(key64)[5:]
+                        _, self.v10_key = _crypt_unprotect_data(keydpapi, is_key=True)
+                    else:
+                        self.v10_key = None
+                    
+                    # Handle v20 app_bound_encrypted_key
+                    self.v20_key = None
+                    if 'app_bound_encrypted_key' in key_file_json['os_crypt']:
+                        try:
+                            app_bound_encrypted_key = key_file_json['os_crypt']['app_bound_encrypted_key']
+                            if binascii.a2b_base64(app_bound_encrypted_key)[:4] == b"APPB":
+                                key_blob_encrypted = binascii.a2b_base64(app_bound_encrypted_key)[4:]
+                                
+                                # Decrypt with SYSTEM DPAPI
+                                if windows and _is_admin():
+                                    try:
+                                        with _impersonate_lsass():
+                                            key_blob_system_decrypted = windows.crypto.dpapi.unprotect(key_blob_encrypted)
+                                        
+                                        # Decrypt with user DPAPI
+                                        key_blob_user_decrypted = windows.crypto.dpapi.unprotect(key_blob_system_decrypted)
+                                        
+                                        # Parse key blob and derive v20 master key
+                                        parsed_data = _parse_key_blob(key_blob_user_decrypted)
+                                        self.v20_key = _derive_v20_master_key(parsed_data)
+                                    except Exception:
+                                        # Fallback to v10 key if v20 fails
+                                        pass
+                        except Exception:
+                            # Ignore v20 key errors and continue with v10
+                            pass
             else:
                 self.v10_key = None
+                self.v20_key = None
 
             # get cookie file from APPDATA
 
@@ -592,6 +764,15 @@ class ChromiumBased:
         """Decrypt encoded cookies"""
 
         if sys.platform == 'win32':
+            # Check for v20 cookies first
+            if encrypted_value[:3] == b'v20':
+                if hasattr(self, 'v20_key') and self.v20_key:
+                    try:
+                        return self._decrypt_v20_cookie(encrypted_value, has_integrity_check_for_cookie_domain)
+                    except Exception:
+                        # Fallback to other methods if v20 decryption fails
+                        pass
+                        
             try:
                 return self._decrypt_windows_chromium(value, encrypted_value)
 
@@ -617,8 +798,16 @@ class ChromiumBased:
                     data = data[32:]
                 return data.decode()
 
-        if value or (encrypted_value[:3] not in [b'v11', b'v10']):
+        if value or (encrypted_value[:3] not in [b'v11', b'v10', b'v20']):
             return value
+
+        # Check for v20 cookies on non-Windows platforms (though unlikely)
+        if encrypted_value[:3] == b'v20':
+            if hasattr(self, 'v20_key') and self.v20_key:
+                try:
+                    return self._decrypt_v20_cookie(encrypted_value, has_integrity_check_for_cookie_domain)
+                except Exception:
+                    pass
 
         # Encrypted cookies should be prefixed with 'v10' on mac,
         # 'v10' or 'v11' on Linux. Choose key based on this prefix.
@@ -644,6 +833,23 @@ class ChromiumBased:
             except ValueError:
                 pass
         raise BrowserCookieError('Unable to get key for cookie decryption')
+
+    def _decrypt_v20_cookie(self, encrypted_value, has_integrity_check_for_cookie_domain=False):
+        """Decrypt Chrome v20 cookies using AES256GCM"""
+        # [flag|iv|ciphertext|tag] encrypted_value
+        # [3bytes|12bytes|variable|16bytes]
+        cookie_iv = encrypted_value[3:3+12]
+        encrypted_cookie = encrypted_value[3+12:-16]
+        cookie_tag = encrypted_value[-16:]
+        
+        cookie_cipher = AES.new(self.v20_key, AES.MODE_GCM, nonce=cookie_iv)
+        decrypted_cookie = cookie_cipher.decrypt_and_verify(encrypted_cookie, cookie_tag)
+        
+        # Skip the first 32 bytes (domain hash) if present
+        if has_integrity_check_for_cookie_domain or len(decrypted_cookie) > 32:
+            decrypted_cookie = decrypted_cookie[32:]
+            
+        return decrypted_cookie.decode('utf-8')
 
 
 class Chrome(ChromiumBased):
