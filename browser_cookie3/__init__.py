@@ -1418,7 +1418,7 @@ def load(domain_name=""):
     return cj
 
 
-__all__ = ['BrowserCookieError', 'load', 'all_browsers'] + all_browsers
+__all__ = ['BrowserCookieError', 'load', 'all_browsers'] + [i.__name__ for i in all_browsers]
 
 
 if __name__ == '__main__':
