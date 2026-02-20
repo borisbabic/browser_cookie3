@@ -15,7 +15,7 @@ import sys
 import tempfile
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Callable, Dict, Iterable, List, Optional, Union
 
 
 if sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
@@ -1404,12 +1404,45 @@ def w3m(cookie_file=None, domain_name=""):
 
 all_browsers = [chrome, chromium, opera, opera_gx, brave, edge, vivaldi, firefox, librewolf, safari, lynx, w3m, arc]
 
-def load(domain_name=""):
-    """Try to load cookies from all supported browsers and return combined cookiejar
-    Optionally pass in a domain name to only load cookies from the specified domain
+BROWSERS: Dict[str, Callable] = {fn.__name__: fn for fn in all_browsers}
+"""Mapping of browser name to its cookie-loader function.
+
+Useful for input validation and dynamic dispatch::
+
+    # Validate a user-supplied name
+    if name not in browser_cookie3.BROWSERS:
+        raise ValueError(f"Unknown browser: {name!r}")
+
+    # Dispatch by name
+    cj = browser_cookie3.BROWSERS[name](domain_name="example.com")
+"""
+
+
+def load(domain_name: str = "", browsers: Optional[Iterable[Union[str, Callable]]] = None):
+    """Try to load cookies from supported browsers and return combined cookiejar.
+
+    Parameters
+    ----------
+    domain_name:
+        Only load cookies from this domain. Passed through to each browser
+        loader. Defaults to ``""`` (all domains).
+    browsers:
+        Browsers to try. Each entry may be a name string (looked up in
+        :data:`BROWSERS`) or a callable browser loader directly, e.g.::
+
+            load(browsers=["firefox", "chrome"])
+            load(browsers=["firefox", browser_cookie3.chrome])
+
+        Defaults to ``None``, which tries all browsers in :data:`all_browsers`
+        (existing behaviour).
     """
+    if browsers is None:
+        fns = all_browsers
+    else:
+        fns = [BROWSERS[b] if isinstance(b, str) else b for b in browsers]
+
     cj = http.cookiejar.CookieJar()
-    for cookie_fn in all_browsers:
+    for cookie_fn in fns:
         try:
             for cookie in cookie_fn(domain_name=domain_name):
                 cj.set_cookie(cookie)
@@ -1418,7 +1451,7 @@ def load(domain_name=""):
     return cj
 
 
-__all__ = ['BrowserCookieError', 'load', 'all_browsers'] + all_browsers
+__all__ = ['BrowserCookieError', 'load', 'all_browsers', 'BROWSERS'] + all_browsers
 
 
 if __name__ == '__main__':
