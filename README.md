@@ -75,6 +75,18 @@ Alternatively if you don't know/care which browser has the cookies you want then
 'richardpenman / home &mdash; Bitbucket'
 ```
 
+To load cookies from a specific subset of browsers:
+```python
+import browser_cookie3
+cj = browser_cookie3.load(domain_name='example.com', browsers=['firefox', 'chrome'])
+```
+
+To get a list of all supported browser names:
+```python
+>>> list(browser_cookie3.BROWSERS)
+['chrome', 'chromium', 'opera', 'opera_gx', 'brave', 'edge', 'vivaldi', 'firefox', 'librewolf', 'safari', 'lynx', 'w3m', 'arc']
+```
+
 Alternatively if you are only interested in cookies from a specific domain, you can specify a domain filter.
 ```python
 #!python
