@@ -649,41 +649,77 @@ class ChromiumBased:
 class Chrome(ChromiumBased):
     """Class for Google Chrome"""
 
-    def __init__(self, cookie_file=None, domain_name="", key_file=None):
-        args = {
-            'linux_cookies': _genarate_nix_paths_chromium(
-                [
-                    '~/.config/google-chrome{channel}/Default/Cookies',
-                    '~/.config/google-chrome{channel}/Profile */Cookies',
-                    '~/.var/app/com.google.Chrome/config/google-chrome{channel}/Default/Cookies',
-                    '~/.var/app/com.google.Chrome/config/google-chrome{channel}/Profile */Cookies'
-                ],
-                channel=['', '-beta', '-unstable']
-            ),
-            'windows_cookies': _genarate_win_paths_chromium(
-                [
-                    'Google\\Chrome{channel}\\User Data\\Default\\Cookies',
-                    'Google\\Chrome{channel}\\User Data\\Default\\Network\\Cookies',
-                    'Google\\Chrome{channel}\\User Data\\Profile *\\Cookies',
-                    'Google\\Chrome{channel}\\User Data\\Profile *\\Network\\Cookies'
-                ],
-                channel=['', ' Beta', ' Dev']
-            ),
-            'osx_cookies': _genarate_nix_paths_chromium(
-                [
-                    '~/Library/Application Support/Google/Chrome{channel}/Default/Cookies',
-                    '~/Library/Application Support/Google/Chrome{channel}/Profile */Cookies'
-                ],
-                channel=['', ' Beta', ' Dev']
-            ),
-            'windows_keys': _genarate_win_paths_chromium(
-                'Google\\Chrome{channel}\\User Data\\Local State',
-                channel=['', ' Beta', ' Dev']
-            ),
-            'os_crypt_name': 'chrome',
-            'osx_key_service': 'Chrome Safe Storage',
-            'osx_key_user': 'Chrome'
-        }
+    def __init__(self, cookie_file=None, domain_name="", key_file=None, user_data_dir=None):
+        if user_data_dir:
+            user_data_dir = os.path.expanduser(user_data_dir)
+            if sys.platform == 'darwin':
+                args = {
+                    'osx_cookies': [
+                        user_data_dir + '/Default/Cookies',
+                        user_data_dir + '/Profile */Cookies',
+                    ],
+                    'os_crypt_name': 'chrome',
+                    'osx_key_service': 'Chrome Safe Storage',
+                    'osx_key_user': 'Chrome'
+                }
+            elif sys.platform.startswith('linux') or 'bsd' in sys.platform.lower():
+                args = {
+                    'linux_cookies': [
+                        user_data_dir + '/Default/Cookies',
+                        user_data_dir + '/Profile */Cookies',
+                    ],
+                    'os_crypt_name': 'chrome',
+                }
+            elif sys.platform == "win32":
+                args = {
+                    'windows_cookies': [
+                        {'env': '', 'path': user_data_dir + '\\Default\\Cookies'},
+                        {'env': '', 'path': user_data_dir + '\\Default\\Network\\Cookies'},
+                        {'env': '', 'path': user_data_dir + '\\Profile *\\Cookies'},
+                        {'env': '', 'path': user_data_dir + '\\Profile *\\Network\\Cookies'},
+                    ],
+                    'windows_keys': [
+                        {'env': '', 'path': user_data_dir + '\\Local State'},
+                    ],
+                    'os_crypt_name': 'chrome',
+                }
+            else:
+                raise BrowserCookieError("OS not recognized. Works on OSX, Windows, and Linux.")
+        else:
+            args = {
+                'linux_cookies': _genarate_nix_paths_chromium(
+                    [
+                        '~/.config/google-chrome{channel}/Default/Cookies',
+                        '~/.config/google-chrome{channel}/Profile */Cookies',
+                        '~/.var/app/com.google.Chrome/config/google-chrome{channel}/Default/Cookies',
+                        '~/.var/app/com.google.Chrome/config/google-chrome{channel}/Profile */Cookies'
+                    ],
+                    channel=['', '-beta', '-unstable']
+                ),
+                'windows_cookies': _genarate_win_paths_chromium(
+                    [
+                        'Google\\Chrome{channel}\\User Data\\Default\\Cookies',
+                        'Google\\Chrome{channel}\\User Data\\Default\\Network\\Cookies',
+                        'Google\\Chrome{channel}\\User Data\\Profile *\\Cookies',
+                        'Google\\Chrome{channel}\\User Data\\Profile *\\Network\\Cookies'
+                    ],
+                    channel=['', ' Beta', ' Dev']
+                ),
+                'osx_cookies': _genarate_nix_paths_chromium(
+                    [
+                        '~/Library/Application Support/Google/Chrome{channel}/Default/Cookies',
+                        '~/Library/Application Support/Google/Chrome{channel}/Profile */Cookies'
+                    ],
+                    channel=['', ' Beta', ' Dev']
+                ),
+                'windows_keys': _genarate_win_paths_chromium(
+                    'Google\\Chrome{channel}\\User Data\\Local State',
+                    channel=['', ' Beta', ' Dev']
+                ),
+                'os_crypt_name': 'chrome',
+                'osx_key_service': 'Chrome Safe Storage',
+                'osx_key_user': 'Chrome'
+            }
         super().__init__(browser='Chrome', cookie_file=cookie_file,
                          domain_name=domain_name, key_file=key_file, **args)
 
@@ -1313,11 +1349,12 @@ def create_cookie(host, path, secure, expires, name, value, http_only):
                                  {'HTTPOnly': ''} if http_only else {})
 
 
-def chrome(cookie_file=None, domain_name="", key_file=None):
+def chrome(cookie_file=None, domain_name="", key_file=None, user_data_dir=None):
     """Returns a cookiejar of the cookies used by Chrome. Optionally pass in a
-    domain name to only load cookies from the specified domain
+    domain name to only load cookies from the specified domain.
+    Optionally pass user_data_dir to load cookies from a custom Chrome profile.
     """
-    return Chrome(cookie_file, domain_name, key_file).load()
+    return Chrome(cookie_file, domain_name, key_file, user_data_dir).load()
 
 
 def arc(cookie_file=None, domain_name="", key_file=None):
