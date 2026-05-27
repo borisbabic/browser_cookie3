@@ -127,9 +127,12 @@ def _expand_win_path(path: Union[dict, str]):
     return os.path.join(os.getenv(path['env'], ''), path['path'])
 
 
-def _expand_paths_impl(paths: list, os_name: str):
+def _expand_paths_impl(paths: list | None, os_name: str):
     """Expands user paths on Linux, OSX, and windows"""
-
+    
+    if paths is None:
+         paths = []
+    
     os_name = os_name.lower()
     assert os_name in ['windows', 'osx', 'linux']
 
