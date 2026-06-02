@@ -388,6 +388,13 @@ class _DatabaseConnetion():
             self.__temp_cookie_file = tf.name
         try:
             shutil.copyfile(self.__database_file, self.__temp_cookie_file)
+            for suffix in ('-wal', '-shm'):
+                src = self.__database_file + suffix
+                if os.path.exists(src):
+                    try:
+                        shutil.copyfile(src, self.__temp_cookie_file + suffix)
+                    except (PermissionError, OSError):
+                        pass
         except PermissionError:
             return
         con = sqlite3.connect(self.__temp_cookie_file)
@@ -422,10 +429,11 @@ class _DatabaseConnetion():
         if self.__connection:
             self.__connection.close()
         if self.__temp_cookie_file:
-            try:
-                os.remove(self.__temp_cookie_file)
-            except Exception:
-                pass
+            for suffix in ('', '-wal', '-shm'):
+                try:
+                    os.remove(self.__temp_cookie_file + suffix)
+                except Exception:
+                    pass
 
 
 class ChromiumBased:
