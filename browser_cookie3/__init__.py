@@ -37,7 +37,12 @@ if sys.platform == 'win32':
 
 
 # external dependencies
-import lz4.block
+try:
+    # lz4ext is preferred: it ships wheels for the recent Python versions
+    import lz4ext
+except ImportError:
+    lz4ext = None
+    import lz4.block
 from Cryptodome.Cipher import AES
 from Cryptodome.Protocol.KDF import PBKDF2
 from Cryptodome.Util.Padding import unpad
@@ -49,6 +54,17 @@ CHROMIUM_DEFAULT_PASSWORD = b'peanuts'
 
 class BrowserCookieError(Exception):
     pass
+
+
+def _lz4_block_decompress(data: bytes) -> bytes:
+    """Decompress a LZ4 block prefixed with its uncompressed size"""
+    if lz4ext is None:
+        return lz4.block.decompress(data)
+    # lz4ext refuses by default to write more than 64 MiB, which a large
+    # Firefox session store can exceed: trust the size stored in the header
+    # like lz4.block does
+    return lz4ext.decompress(
+        data, max_output_size=int.from_bytes(data[:4], 'little'))
 
 
 def _windows_group_policy_path():
@@ -1035,7 +1051,7 @@ class FirefoxBased:
         try:
             with open(self.session_file_lz4, 'rb') as file_obj:
                 file_obj.read(8)
-                json_data = json.loads(lz4.block.decompress(file_obj.read()))
+                json_data = json.loads(_lz4_block_decompress(file_obj.read()))
         except ValueError as e:
             print(
                 f'Error parsing {self.browser_name} session JSON LZ4:', str(e))
