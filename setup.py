@@ -11,7 +11,8 @@ setup(
     description='Loads cookies from your browser into a cookiejar object so can download with urllib and other libraries the same content you see in the web browser.',     # noqa: E501
     url='https://github.com/borisbabic/browser_cookie3',
     install_requires=[
-        'lz4',
+        'lz4; python_version < "3.11"',
+        'lz4ext; python_version >= "3.11"',
         'pycryptodomex',
         'dbus-python; python_version < "3.7" and ("bsd" in sys_platform or sys_platform == "linux")',
         'jeepney; python_version >= "3.7" and ("bsd" in sys_platform or sys_platform == "linux")',

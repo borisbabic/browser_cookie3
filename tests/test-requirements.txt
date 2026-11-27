@@ -3,4 +3,5 @@ selenium==4.9.1
 pycryptodomex
 requests
 jeepney
-lz4
+lz4; python_version < "3.11"
+lz4ext; python_version >= "3.11"
